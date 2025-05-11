@@ -13,6 +13,10 @@
       "path": "apps/web-ele",
     },
     {
+      "name": "@vben/web-fsa",
+      "path": "apps/web-fsa",
+    },
+    {
       "name": "@vben/web-naive",
       "path": "apps/web-naive",
     },
