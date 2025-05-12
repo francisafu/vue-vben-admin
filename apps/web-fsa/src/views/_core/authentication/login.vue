@@ -56,6 +56,5 @@ const formSchema = computed((): VbenFormSchema[] => {
     @submit="authStore.authLogin"
     :title="$t('page.auth.loginTitle')"
     :sub-title="$t('page.auth.loginSubtitle')"
-  >
-  </AuthenticationLogin>
+  />
 </template>
