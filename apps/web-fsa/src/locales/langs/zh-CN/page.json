@@ -4,7 +4,11 @@
     "register": "注册",
     "codeLogin": "验证码登录",
     "qrcodeLogin": "二维码登录",
-    "forgetPassword": "忘记密码"
+    "forgetPassword": "忘记密码",
+    "phone": "手机号",
+    "phoneTip": "请输入手机号",
+    "loginTitle": "内购助手",
+    "loginSubtitle": "仅供集团内部员工测试学习之用"
   },
   "dashboard": {
     "title": "概览",
