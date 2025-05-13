@@ -1,7 +1,5 @@
 import type { RouteRecordRaw } from 'vue-router';
 
-import { VBEN_LOGO_URL } from '@vben/constants';
-
 import { $t } from '#/locales';
 
 const routes: RouteRecordRaw[] = [

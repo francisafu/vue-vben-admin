@@ -1,6 +1,6 @@
 import type { RouteRecordRaw } from 'vue-router';
-import { BasicLayout, IFrameView } from '#/layouts';
 
+import { BasicLayout, IFrameView } from '#/layouts';
 import { $t } from '#/locales';
 
 const routes: RouteRecordRaw[] = [
