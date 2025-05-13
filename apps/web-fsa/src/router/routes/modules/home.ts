@@ -15,7 +15,7 @@ const routes: RouteRecordRaw[] = [
       {
         name: 'Workspace',
         path: '/home/workspace',
-        component: () => import('#/views/dashboard/workspace/index.vue'),
+        component: () => import('#/views/home/workspace/index.vue'),
         meta: {
           icon: 'carbon:workspace',
           title: $t('page.home.workspace', { defaultValue: '工作台' }),
@@ -35,6 +35,7 @@ const routes: RouteRecordRaw[] = [
         path: '/home/user',
         component: () => import('#/views/home/user/index.vue'),
         meta: {
+          authority: ['ADMIN'],
           icon: 'lucide:users',
           title: $t('page.home.userManage', { defaultValue: '用户管理' }),
         },
@@ -44,6 +45,7 @@ const routes: RouteRecordRaw[] = [
         path: '/home/activity',
         component: () => import('#/views/home/activity/index.vue'),
         meta: {
+          authority: ['ADMIN'],
           icon: 'lucide:calendar',
           title: $t('page.home.activityManage', { defaultValue: '活动管理' }),
         },

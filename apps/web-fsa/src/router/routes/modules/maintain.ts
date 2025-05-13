@@ -5,6 +5,7 @@ import { $t } from '#/locales';
 const routes: RouteRecordRaw[] = [
   {
     meta: {
+      authority: ['ADMIN'],
       icon: 'lucide:settings',
       order: 3,
       title: $t('page.maintain.title', { defaultValue: '运维' }),

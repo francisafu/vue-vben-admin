@@ -13,7 +13,7 @@
   "home":{
     "title": "主页",
     "workspace": "工作面板",
-    "accountManage": "账户管理",
+    "accountManage": "个人中心",
     "userManage": "用户管理",
     "activityManage": "活动管理",
     "taskManage": "任务管理"
