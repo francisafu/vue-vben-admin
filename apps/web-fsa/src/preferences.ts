@@ -11,5 +11,34 @@ export const overridesPreferences = defineOverridesPreferences({
     name: import.meta.env.VITE_APP_TITLE,
     enableRefreshToken: true,
     loginExpiredMode: 'page',
+    authPageLayout: 'panel-center',
+    enableCheckUpdates: false,
+    enablePreferences: false,
+    defaultHomePath: '/home/account',
+    locale: 'zh-CN',
+  },
+  copyright: {
+    enable: false,
+  },
+  footer: {
+    fixed: true,
+  },
+  shortcutKeys: {
+    enable: false,
+  },
+  tabbar: {
+    showMaximize: false,
+    showMore: false,
+  },
+  theme: {
+    mode: 'auto',
+    semiDarkSidebar: false,
+  },
+  widget: {
+    fullscreen: false,
+    globalSearch: false,
+    languageToggle: false,
+    lockScreen: false,
+    notification: false,
   },
 });
