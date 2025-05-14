@@ -9,6 +9,7 @@ import { Button, Card, Divider, message, TabPane, Tabs } from 'ant-design-vue';
 
 import { useVbenForm, z } from '#/adapter/form';
 import { useVbenVxeGrid } from '#/adapter/vxe-table';
+import { $t } from '#/locales';
 import {
   deleteAddressApi,
   getAccountInfoApi,
@@ -42,14 +43,14 @@ const [Modal, modalApi] = useVbenModal({
 
 function handleNewAddress() {
   // 明确设置为空数据，确保不会有历史数据残留
-  modalApi.setState({ title: '新增地址' }).setData({
+  modalApi.setState({ title: $t('page.account.addAddress', { defaultValue: '新增地址' }) }).setData({
     addressData: null
   }).open();
 }
 
 // 编辑地址按钮
 function handleEditAddress(row: AccountApi.AccountAddress) {
-  modalApi.setState({ title: '编辑地址' }).setData({
+  modalApi.setState({ title: $t('page.account.editAddress', { defaultValue: '编辑地址' }) }).setData({
     addressData: row
   }).open();
 }
@@ -68,33 +69,33 @@ const [BaseInfoForm, baseInfoFormApi] = useVbenForm({
     {
       component: 'Input',
       componentProps: {
-        placeholder: '请输入用户名',
+        placeholder: $t('page.account.usernamePlaceholder', { defaultValue: '请输入用户名' }),
       },
       fieldName: 'username',
-      label: '用户名',
+      label: $t('page.account.username', { defaultValue: '用户名' }),
       rules: 'required',
     },
     {
       component: 'Input',
       componentProps: {
-        placeholder: '请输入手机号',
+        placeholder: $t('page.account.phonePlaceholder', { defaultValue: '请输入手机号' }),
         maxlength: 11,
       },
       fieldName: 'phone',
-      label: '手机号',
-      rules: z.string().regex(/^1[3-9]\d{9}$/, '请输入正确的手机号格式'),
+      label: $t('page.account.phone', { defaultValue: '手机号' }),
+      rules: z.string().regex(/^1[3-9]\d{9}$/, $t('page.account.phoneFormatError', { defaultValue: '请输入正确的手机号格式' })),
     },
     {
       component: 'Input',
       componentProps: {
-        placeholder: '请输入推送加Token，不需要请留空',
+        placeholder: $t('page.account.pushplusTokenPlaceholder', { defaultValue: '请输入推送加Token，不需要请留空' }),
       },
       fieldName: 'pushplusToken',
-      label: '推送加Token',
+      label: $t('page.account.pushplusToken', { defaultValue: '推送加Token' }),
     },
   ],
   submitButtonOptions: {
-    content: '保存',
+    content: $t('page.common.save', { defaultValue: '保存' }),
   },
 });
 
@@ -105,7 +106,7 @@ const [PasswordForm, passwordFormApi] = useVbenForm({
     // 在提交前先验证密码是否一致
     const { newPassword, confirmPassword } = values;
     if (newPassword !== confirmPassword) {
-      message.error('两次输入的密码不一致');
+      message.error($t('page.account.passwordMismatch', { defaultValue: '两次输入的密码不一致' }));
       return;
     }
 
@@ -118,27 +119,27 @@ const [PasswordForm, passwordFormApi] = useVbenForm({
     {
       component: 'InputPassword',
       componentProps: {
-        placeholder: '请输入新密码',
+        placeholder: $t('page.account.newPasswordPlaceholder', { defaultValue: '请输入新密码' }),
       },
       fieldName: 'newPassword',
-      label: '新密码',
-      rules: z.string().min(6, '密码长度不能少于6位'),
+      label: $t('page.account.newPassword', { defaultValue: '新密码' }),
+      rules: z.string().min(6, $t('page.account.passwordLengthError', { defaultValue: '密码长度不能少于6位' })),
     },
     {
       component: 'InputPassword',
       componentProps: {
-        placeholder: '请再次输入新密码',
+        placeholder: $t('page.account.confirmPasswordPlaceholder', { defaultValue: '请再次输入新密码' }),
       },
       fieldName: 'confirmPassword',
-      label: '确认密码',
-      rules: z.string().min(1, '请输入确认密码'),
+      label: $t('page.account.confirmPassword', { defaultValue: '确认密码' }),
+      rules: z.string().min(1, $t('page.account.confirmPasswordRequired', { defaultValue: '请输入确认密码' })),
     },
   ],
   submitButtonOptions: {
-    content: '保存',
+    content: $t('page.common.save', { defaultValue: '保存' }),
   },
   resetButtonOptions: {
-    content: '清空',
+    content: $t('page.common.clear', { defaultValue: '清空' }),
   },
 });
 
@@ -154,18 +155,18 @@ const gridOptions = {
     resizable: true,
   },
   columns: [
-    { title: '序号', type: 'seq', width: 60 },
-    { field: 'userName', title: '收件人', width: 100 },
-    { field: 'mobilePhone', title: '手机号', width: 130 },
+    { title: $t('page.common.seqNo', { defaultValue: '序号' }), type: 'seq', width: 60 },
+    { field: 'userName', title: $t('page.account.recipient', { defaultValue: '收件人' }), width: 100 },
+    { field: 'mobilePhone', title: $t('page.account.phone', { defaultValue: '手机号' }), width: 130 },
     {
       field: 'address',
-      title: '地址',
+      title: $t('page.account.address', { defaultValue: '地址' }),
       minWidth: 300,
       slots: { default: 'address' },
     },
     {
       field: 'action',
-      title: '操作',
+      title: $t('page.common.action', { defaultValue: '操作' }),
       width: 160,
       slots: { default: 'action' },
     },
@@ -228,8 +229,7 @@ async function fetchUserInfo() {
       }
     }, 300);
   } catch (error) {
-    console.error('获取用户信息失败', error);
-    message.error('获取用户信息失败');
+    message.error($t('page.account.fetchUserInfoError', { defaultValue: '获取用户信息失败' }));
   } finally {
     loading.value = false;
   }
@@ -241,8 +241,7 @@ async function fetchAddressData() {
     const res = await getAddressDataApi();
     addressData.value = res;
   } catch (error) {
-    console.error('获取地址数据失败', error);
-    message.error('获取地址数据失败');
+    message.error($t('page.account.fetchAddressDataError', { defaultValue: '获取地址数据失败' }));
   }
 }
 
@@ -253,11 +252,10 @@ async function handleUpdateBasicInfo(
   try {
     loading.value = true;
     await updateAccountBasicApi(values);
-    message.success('基本信息更新成功');
+    message.success($t('page.account.updateBasicInfoSuccess', { defaultValue: '基本信息更新成功' }));
     await fetchUserInfo();
   } catch (error) {
-    console.error('更新基本信息失败', error);
-    message.error('更新基本信息失败');
+    message.error($t('page.account.updateBasicInfoError', { defaultValue: '更新基本信息失败' }));
   } finally {
     loading.value = false;
   }
@@ -271,7 +269,7 @@ async function handleUpdatePassword(values: {
   try {
     loading.value = true;
     await updateAccountPasswordApi({ newPassword: values.newPassword });
-    message.success('密码修改成功');
+    message.success($t('page.account.updatePasswordSuccess', { defaultValue: '密码修改成功' }));
 
     // 清空表单
     // @ts-ignore
@@ -280,8 +278,7 @@ async function handleUpdatePassword(values: {
     // 密码更新成功后重新获取用户信息，确保数据不丢失
     await fetchUserInfo();
   } catch (error) {
-    console.error('更新密码失败', error);
-    message.error('更新密码失败');
+    message.error($t('page.account.updatePasswordError', { defaultValue: '更新密码失败' }));
   } finally {
     loading.value = false;
   }
@@ -291,7 +288,7 @@ async function handleUpdatePassword(values: {
 async function handleDeleteAddress(row: AccountApi.AccountAddress) {
   try {
     await deleteAddressApi({ id: row.id });
-    message.success('地址删除成功');
+    message.success($t('page.account.deleteAddressSuccess', { defaultValue: '地址删除成功' }));
 
     // 刷新用户信息
     await fetchUserInfo();
@@ -306,8 +303,7 @@ async function handleDeleteAddress(row: AccountApi.AccountAddress) {
       }
     }, 300);
   } catch (error) {
-    console.error('删除地址失败', error);
-    message.error('删除地址失败');
+    message.error($t('page.account.deleteAddressError', { defaultValue: '删除地址失败' }));
   }
 }
 
@@ -318,17 +314,17 @@ async function handleDeleteAddress(row: AccountApi.AccountAddress) {
   <Page>
     <Modal />
     <div class="p-4">
-      <h1 class="mb-4 text-2xl font-bold">个人中心</h1>
+      <h1 class="mb-4 text-2xl font-bold">{{ $t('page.account.title', { defaultValue: '个人中心' }) }}</h1>
 
       <div class="mb-4">
         <Card :loading="loading" :bordered="false">
           <Tabs class="account-tabs">
-            <TabPane key="basic" tab="基本资料">
+            <TabPane key="basic" :tab="$t('page.account.basicInfo', { defaultValue: '基本资料' })">
               <div class="tab-content">
                 <BaseInfoForm />
               </div>
             </TabPane>
-            <TabPane key="password" tab="修改密码">
+            <TabPane key="password" :tab="$t('page.account.modifyPassword', { defaultValue: '修改密码' })">
               <div class="tab-content">
                 <PasswordForm />
               </div>
@@ -337,12 +333,12 @@ async function handleDeleteAddress(row: AccountApi.AccountAddress) {
         </Card>
       </div>
 
-      <Divider>地址管理</Divider>
+      <Divider>{{ $t('page.account.addressManagement', { defaultValue: '地址管理' }) }}</Divider>
 
       <div class="address-list">
         <Card :loading="loading" :bordered="false">
           <template #extra>
-            <Button type="primary" @click="handleNewAddress">新增地址</Button>
+            <Button type="primary" @click="handleNewAddress">{{ $t('page.account.addAddress', { defaultValue: '新增地址' }) }}</Button>
           </template>
 
           <Grid ref="gridRef">
@@ -352,9 +348,9 @@ async function handleDeleteAddress(row: AccountApi.AccountAddress) {
             </template>
 
             <template #action="{ row }">
-              <Button type="link" @click="handleEditAddress(row)">编辑</Button>
+              <Button type="link" @click="handleEditAddress(row)">{{ $t('page.common.edit', { defaultValue: '编辑' }) }}</Button>
               <Button type="link" danger @click="handleDeleteAddress(row)">
-                删除
+                {{ $t('page.common.delete', { defaultValue: '删除' }) }}
               </Button>
             </template>
           </Grid>
