@@ -9,6 +9,7 @@ export namespace UserApi {
     pageSize?: number;
     keyword?: string;
     role?: string;
+    isEnabled?: string;
   }
 
   /** 用户列表返回的用户信息 */
