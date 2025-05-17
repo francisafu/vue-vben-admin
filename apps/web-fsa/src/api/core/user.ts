@@ -68,6 +68,14 @@ export namespace UserApi {
     isEnabled?: boolean;
     pushplusToken?: null | string;
   }
+  
+  /** 用户地址信息 */
+  export interface UserAddress {
+    id: number;
+    name: string;     // 收件人姓名
+    phone: string;    // 联系电话
+    fullAddress: string; // 完整地址
+  }
 }
 
 /**
@@ -116,4 +124,11 @@ export async function updateUserApi(
  */
 export async function deleteUserApi(id: number) {
   return requestClient.post<null>(`/users/${id}/delete`);
+}
+
+/**
+ * 获取用户地址列表
+ */
+export async function getUserAddressesApi(userId: number) {
+  return requestClient.post<UserApi.UserAddress[]>(`/users/${userId}/addr`);
 }

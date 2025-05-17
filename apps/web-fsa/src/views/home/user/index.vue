@@ -12,7 +12,8 @@ import { $t } from '#/locales';
 import {
   listUsersApi,
   deleteUserApi,
-  updateUserApi
+  updateUserApi,
+  getUserAddressesApi
 } from '#/api/core/user';
 
 import UserModal from './user-modal.vue';
@@ -28,6 +29,10 @@ const pagination = reactive<TablePaginationConfig>({
   pageSizeOptions: ['10', '20', '50', '100'],
   showTotal: (total) => `${$t('page.common.total')} ${total} ${$t('page.common.items')}`
 });
+
+// 地址数据
+const addressesMap = ref<Record<number, UserApi.UserAddress[]>>({});
+const addressLoading = ref<Record<number, boolean>>({});
 
 // 搜索参数
 const searchParams = ref<UserApi.ListUsersParams>({
@@ -78,6 +83,24 @@ async function handleToggleStatus(row: UserApi.UserItem) {
     }
   } finally {
     loading.value = false;
+  }
+}
+
+// 获取用户地址信息
+async function fetchUserAddresses(userId: number) {
+  if (addressesMap.value[userId]) {
+    return;
+  }
+  
+  try {
+    addressLoading.value[userId] = true;
+    const addresses = await getUserAddressesApi(userId);
+    addressesMap.value[userId] = addresses;
+  } catch (error) {
+    message.error($t('page.user.fetchAddressError'));
+    addressesMap.value[userId] = [];
+  } finally {
+    addressLoading.value[userId] = false;
   }
 }
 
@@ -140,6 +163,28 @@ const columns: ColumnsType = [
     title: $t('page.common.action'),
     key: 'action',
     minWidth: 180
+  }
+];
+
+// 地址表格列定义
+const addressColumns: ColumnsType = [
+  {
+    title: $t('page.user.address.name'),
+    dataIndex: 'name',
+    key: 'name',
+    width: 120
+  },
+  {
+    title: $t('page.user.address.phone'),
+    dataIndex: 'phone',
+    key: 'phone',
+    width: 120
+  },
+  {
+    title: $t('page.user.address.fullAddress'),
+    dataIndex: 'fullAddress',
+    key: 'fullAddress',
+    minWidth: 200
   }
 ];
 
@@ -209,6 +254,13 @@ function handleTableChange(pag: TablePaginationConfig) {
   pagination.current = pag.current;
   pagination.pageSize = pag.pageSize;
   fetchUserList();
+}
+
+// 处理行展开
+function handleExpand(expanded: boolean, record: UserApi.UserItem) {
+  if (expanded) {
+    fetchUserAddresses(record.id);
+  }
 }
 
 // 处理搜索
@@ -302,16 +354,41 @@ onMounted(async () => {
           </Button>
         </template>
 
-        <div style="width: 100%">
+        <div style="width: 100%; height: 880px;">
           <Table 
             :columns="columns" 
             :dataSource="userList" 
             :pagination="pagination"
             :loading="loading"
             rowKey="id"
-            :scroll="{ y: 500 }"
+            :scroll="{ y: 750 }"
             @change="handleTableChange"
+            @expand="handleExpand"
           >
+            <!-- 展开图标列添加标题 -->
+            <template #expandColumnTitle>
+              <span>{{ $t('page.user.address.title') }}</span>
+            </template>
+            
+            <!-- 展开行插槽 -->
+            <template #expandedRowRender="{ record }">
+              <div class="px-4">
+                <div class="mb-2 font-medium">{{ $t('page.user.addressList') }}</div>
+                <Table
+                  :columns="addressColumns"
+                  :dataSource="addressesMap[record.id] || []"
+                  :loading="addressLoading[record.id]"
+                  :pagination="false"
+                  size="small"
+                  rowKey="id"
+                  bordered
+                />
+                <div v-if="addressesMap[record.id]?.length === 0" class="py-4 text-center text-gray-500">
+                  {{ $t('page.user.noAddress') }}
+                </div>
+              </div>
+            </template>
+            
             <template #bodyCell="{ column, record }">
               <template v-if="column.key === 'action'">
                 <Button type="link" @click="() => handleEditUser(record as unknown as UserApi.UserItem)">

@@ -101,10 +101,10 @@
     "keyword": "关键字",
     "keywordPlaceholder": "用户名/手机号",
     "addressList": "地址列表",
-    "noAddresses": "暂无地址信息",
+    "noAddress": "暂无地址信息",
     "fetchUserListError": "获取用户列表失败",
     "fetchUserDetailError": "获取用户详情失败",
-    "fetchUserAddressesError": "获取用户地址失败",
+    "fetchAddressError": "获取用户地址失败",
     "updateUserSuccess": "用户更新成功",
     "updateUserError": "更新用户失败",
     "addUserSuccess": "用户添加成功",
@@ -115,7 +115,13 @@
     "enableUserError": "启用用户失败",
     "disableUserSuccess": "禁用用户成功",
     "disableUserError": "禁用用户失败",
-    "loadingUserData": "加载用户数据中..."
+    "loadingUserData": "加载用户数据中...",
+    "address": {
+      "name": "姓名",
+      "phone": "手机号",
+      "fullAddress": "详细地址",
+      "title": "地址"
+    }
   },
   "activity": {
     "title": "活动管理",
