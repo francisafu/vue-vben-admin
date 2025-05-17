@@ -26,7 +26,7 @@ const selectedDistrict = ref<string>('');
 
 // 初始化modal
 const [Modal, modalApi] = useVbenModal({
-  title: $t('page.account.addressManagement', { defaultValue: '地址管理' }),
+  title: $t('page.account.addressManagement'),
   draggable: true,
   footer: false,
   // 打开modal时获取数据
@@ -138,7 +138,7 @@ async function fetchAddressData() {
     // 更新省份下拉选项
     updateProvinceOptions();
   } catch (error) {
-    message.error($t('page.account.fetchAddressDataError', { defaultValue: '获取地址数据失败' }));
+    message.error($t('page.account.fetchAddressDataError'));
   } finally {
     loading.value = false;
   }
@@ -282,11 +282,11 @@ async function handleSubmit(values: any) {
         ...params,
         id: data.value.addressData.id,
       });
-      message.success($t('page.account.updateAddressSuccess', { defaultValue: '地址更新成功' }));
+      message.success($t('page.account.updateAddressSuccess'));
     } else {
       // 新增地址
       await addAddressApi(params);
-      message.success($t('page.account.addAddressSuccess', { defaultValue: '地址添加成功' }));
+      message.success($t('page.account.addAddressSuccess'));
     }
 
     // 设置状态标记操作成功
@@ -297,8 +297,8 @@ async function handleSubmit(values: any) {
 
   } catch (error) {
     message.error(isEdit.value
-      ? $t('page.account.updateAddressError', { defaultValue: '更新地址失败' })
-      : $t('page.account.addAddressError', { defaultValue: '添加地址失败' })
+      ? $t('page.account.updateAddressError')
+      : $t('page.account.addAddressError')
     );
   } finally {
     submitting.value = false;
@@ -310,12 +310,12 @@ const [AddressForm, addressFormApi] = useVbenForm({
   layout: 'vertical',
   handleSubmit,
   submitButtonOptions: {
-    content: $t('page.common.save', { defaultValue: '保存' }),
+    content: $t('page.common.save'),
     disabled: false,
     loading: false,
   },
   resetButtonOptions: {
-    content: $t('page.common.clear', { defaultValue: '清空' }),
+    content: $t('page.common.clear'),
   },
   commonConfig: {
     componentProps: {
@@ -326,65 +326,65 @@ const [AddressForm, addressFormApi] = useVbenForm({
     {
       component: 'Input',
       componentProps: {
-        placeholder: $t('page.account.recipientPlaceholder', { defaultValue: '请输入收件人姓名' }),
+        placeholder: $t('page.account.recipientPlaceholder'),
       },
       fieldName: 'userName',
-      label: $t('page.account.recipient', { defaultValue: '收件人' }),
+      label: $t('page.account.recipient'),
       rules: 'required',
     },
     {
       component: 'Input',
       componentProps: {
-        placeholder: $t('page.account.phonePlaceholder', { defaultValue: '请输入手机号' }),
+        placeholder: $t('page.account.phonePlaceholder'),
         maxlength: 11,
       },
       fieldName: 'mobilePhone',
-      label: $t('page.account.phone', { defaultValue: '手机号' }),
-      rules: z.string().regex(/^1[3-9]\d{9}$/, $t('page.account.phoneFormatError', { defaultValue: '请输入正确的手机号格式' })),
+      label: $t('page.account.phone'),
+      rules: z.string().regex(/^1[3-9]\d{9}$/, $t('page.account.phoneFormatError')),
     },
     {
       component: 'Select',
       componentProps: {
-        placeholder: $t('page.account.provincePlaceholder', { defaultValue: '请选择省份' }),
+        placeholder: $t('page.account.provincePlaceholder'),
         options: [],
         onChange: handleProvinceChange,
         style: { width: '100%' },
       },
       fieldName: 'province',
-      label: $t('page.account.province', { defaultValue: '省份' }),
+      label: $t('page.account.province'),
       rules: 'required',
     },
     {
       component: 'Select',
       componentProps: {
-        placeholder: $t('page.account.cityPlaceholder', { defaultValue: '请选择城市' }),
+        placeholder: $t('page.account.cityPlaceholder'),
         options: [],
         onChange: handleCityChange,
         style: { width: '100%' },
       },
       fieldName: 'city',
-      label: $t('page.account.city', { defaultValue: '城市' }),
+      label: $t('page.account.city'),
       rules: 'required',
     },
     {
       component: 'Select',
       componentProps: {
-        placeholder: $t('page.account.districtPlaceholder', { defaultValue: '请选择区县' }),
+        placeholder: $t('page.account.districtPlaceholder'),
         options: [],
         onChange: handleDistrictChange,
         style: { width: '100%' },
       },
       fieldName: 'district',
-      label: $t('page.account.district', { defaultValue: '区县' }),
+      label: $t('page.account.district'),
       rules: 'required',
     },
     {
       component: 'Input',
       componentProps: {
-        placeholder: $t('page.account.addressDetailPlaceholder', { defaultValue: '请输入详细地址' }),
+        placeholder: $t('page.account.addressDetailPlaceholder'),
       },
       fieldName: 'addrDetail',
-      label: $t('page.account.addressDetail', { defaultValue: '详细地址' }),
+      label: $t('page.account.addressDetail'),
       rules: 'required',
     },
   ],
@@ -396,7 +396,7 @@ const [AddressForm, addressFormApi] = useVbenForm({
   <Modal>
     <div class="address-modal p-4">
       <div v-if="loading" class="flex-center py-10">
-        <div class="text-center">{{ $t('page.account.loadingAddressData', { defaultValue: '加载地址数据中...' }) }}</div>
+        <div class="text-center">{{ $t('page.account.loadingAddressData') }}</div>
       </div>
       <div v-else>
         <AddressForm />

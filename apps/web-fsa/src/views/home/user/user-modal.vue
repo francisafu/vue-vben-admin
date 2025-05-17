@@ -14,13 +14,140 @@ import type { UserApi } from '#/api/core/user';
 // 表单数据
 const data = ref<Record<string, any>>({});
 const isEdit = computed(() => data.value?.isEdit);
+const isPasswordMode = computed(() => data.value?.isPasswordMode);
 const userData = computed(() => data.value?.userData);
 const loading = ref(false);
 const submitting = ref(false);
 
+// 创建字段信息
+const baseFields = [
+  // 隐藏的控制字段 - 用于表单内部联动
+  {
+    component: 'Input',
+    componentProps: {
+      style: { display: 'none' },
+    },
+    fieldName: '_formMode',
+    label: '',
+    defaultValue: 'create',
+  },
+  {
+    component: 'Input',
+    componentProps: {
+      placeholder: $t('page.user.usernamePlaceholder'),
+    },
+    fieldName: 'username',
+    label: $t('page.user.username'),
+    rules: 'required',
+    dependencies: {
+      show: (values: Record<string, any>) => values._formMode !== 'password',
+      triggerFields: ['_formMode'],
+    },
+  },
+  {
+    component: 'Input',
+    componentProps: {
+      placeholder: $t('page.user.phonePlaceholder'),
+      maxlength: 11,
+    },
+    fieldName: 'phone',
+    label: $t('page.user.phone'),
+    rules: z.string().regex(/^1[3-9]\d{9}$/, $t('page.user.phoneFormatError')),
+    dependencies: {
+      show: (values: Record<string, any>) => values._formMode !== 'password',
+      triggerFields: ['_formMode'],
+    },
+  },
+  {
+    component: 'InputPassword',
+    componentProps: {
+      placeholder: $t('page.user.passwordPlaceholder'),
+      style: { display: 'flex', height: '32px' }
+    },
+    fieldName: 'password',
+    label: $t('page.user.password'),
+    dependencies: {
+      show: (values: Record<string, any>) => values._formMode !== 'edit',
+      rules: (values: Record<string, any>) => {
+        // 所有模式下都必填
+        return z.string().min(6, $t('page.user.passwordLengthError'));
+      },
+      triggerFields: ['_formMode'],
+    },
+  },
+  {
+    component: 'InputPassword',
+    componentProps: {
+      placeholder: $t('page.user.confirmPasswordPlaceholder'),
+      style: { display: 'flex', height: '32px' }
+    },
+    fieldName: 'confirmPassword',
+    label: $t('page.user.confirmPassword'),
+    dependencies: {
+      show: (values: Record<string, any>) => values._formMode !== 'edit',
+      rules: (values: Record<string, any>) => {
+        // 所有模式下都必填
+        return 'required';
+      },
+      triggerFields: ['_formMode'],
+    },
+  },
+  {
+    component: 'Select',
+    componentProps: {
+      placeholder: $t('page.user.rolePlaceholder'),
+      options: [
+        { label: $t('page.user.roleAdmin'), value: 'ADMIN' },
+        { label: $t('page.user.roleVip'), value: 'VIP' },
+        { label: $t('page.user.roleUser'), value: 'USER' }
+      ],
+    },
+    fieldName: 'role',
+    label: $t('page.user.role'),
+    defaultValue: 'USER',
+    rules: 'required',
+    dependencies: {
+      show: (values: Record<string, any>) => values._formMode !== 'password',
+      triggerFields: ['_formMode'],
+    },
+  },
+  {
+    component: 'Input',
+    componentProps: {
+      placeholder: $t('page.user.pushplusTokenPlaceholder'),
+    },
+    fieldName: 'pushplusToken',
+    label: $t('page.user.pushplusToken'),
+    dependencies: {
+      show: (values: Record<string, any>) => values._formMode !== 'password',
+      triggerFields: ['_formMode'],
+    },
+  },
+];
+
+// 表单配置
+const [UserForm, userFormApi] = useVbenForm({
+  layout: 'vertical',
+  handleSubmit,
+  submitButtonOptions: {
+    content: $t('page.common.save'),
+    disabled: false,
+    loading: submitting.value,
+  },
+  resetButtonOptions: {
+    content: $t('page.common.clear'),
+  },
+  commonConfig: {
+    componentProps: {
+      class: 'w-full',
+    },
+  },
+  schema: baseFields,
+});
+
 // 初始化modal
 const [Modal, modalApi] = useVbenModal({
-  title: $t('page.user.userManagement', { defaultValue: '用户管理' }),
+  title: $t('page.user.userManagement'),
   draggable: true,
   footer: false,
   // 打开modal时获取数据
@@ -29,101 +156,83 @@ const [Modal, modalApi] = useVbenModal({
       // 获取传入的数据
       data.value = modalApi.getData<Record<string, any>>() || {};
 
-      // 根据模式选择不同的初始化方式
-      if (isEdit.value && userData.value) {
-        // 编辑模式：直接填充表单数据
-        const userInfo = userData.value;
+      // 重置表单
+      (userFormApi as any).resetFields && (userFormApi as any).resetFields();
 
-        // 设置表单值
+      // 根据模式选择不同的初始化方式
+      if (isPasswordMode.value && userData.value) {
+        // 密码修改模式：只显示密码相关字段
         userFormApi.setValues({
+          _formMode: 'password',
+          password: '',
+          confirmPassword: ''
+        });
+      } else if (isEdit.value && userData.value) {
+        // 编辑模式：填充表单数据
+        const userInfo = userData.value;
+        userFormApi.setValues({
+          _formMode: 'edit',
           username: userInfo.username,
           phone: userInfo.phone,
           role: userInfo.role,
-          isEnabled: userInfo.isEnabled.toString(),
-          pushplusToken: userInfo.pushplusToken || ''
+          pushplusToken: userInfo.pushplusToken || '',
         });
-
-        // 编辑模式不需要显示密码字段
-        userFormApi.updateSchema([
-          {
-            componentProps: {
-              style: { display: 'none' }
-            },
-            fieldName: 'password',
-          },
-          {
-            componentProps: {
-              style: { display: 'none' }
-            },
-            fieldName: 'confirmPassword',
-          }
-        ]);
       } else {
-        // 新建模式：重置所有状态
-        resetAllState();
-
-        // 显示密码字段
-        userFormApi.updateSchema([
-          {
-            componentProps: {
-              style: { display: 'block' }
-            },
-            fieldName: 'password',
-          },
-          {
-            componentProps: {
-              style: { display: 'block' }
-            },
-            fieldName: 'confirmPassword',
-          }
-        ]);
+        // 新建模式
+        userFormApi.setValues({
+          _formMode: 'create',
+          username: '',
+          phone: '',
+          password: '',
+          confirmPassword: '',
+          role: 'USER',
+          pushplusToken: ''
+        });
       }
-    } else {
-      // 关闭modal时重置状态
-      resetAllState();
     }
   },
 });
-
-// 重置所有状态
-function resetAllState() {
-  // 重置表单数据 - 使用any类型绕过类型检查
-  (userFormApi as any).resetFields && (userFormApi as any).resetFields();
-
-  // 重置表单值为空
-  userFormApi.setValues({
-    username: '',
-    phone: '',
-    password: '',
-    confirmPassword: '',
-    role: 'USER',
-    isEnabled: 'true',
-    pushplusToken: ''
-  });
-}
 
 // 处理表单提交
 async function handleSubmit(values: any) {
   try {
     submitting.value = true;
 
-    if (isEdit.value) {
+    // 从表单值中获取模式，而不是使用外部变量
+    const formMode = values._formMode;
+
+    if (formMode === 'password') {
+      // 密码修改模式
+      // 验证两次密码是否一致
+      if (values.password !== values.confirmPassword) {
+        message.error($t('page.user.passwordMismatch'));
+        submitting.value = false;
+        return;
+      }
+      
+      // 执行密码更新
+      const params: UserApi.UpdateUserParams = {
+        password: values.password
+      };
+      
+      await updateUserApi(userData.value.id, params);
+      message.success($t('page.user.passwordChangeSuccess'));
+    } else if (formMode === 'edit') {
       // 编辑用户
       const params: UserApi.UpdateUserParams = {
         username: values.username,
         phone: values.phone,
         role: values.role,
-        isEnabled: values.isEnabled === 'true',
         pushplusToken: values.pushplusToken || null
       };
 
       await updateUserApi(userData.value.id, params);
-      message.success($t('page.user.updateUserSuccess', { defaultValue: '用户更新成功' }));
+      message.success($t('page.user.updateUserSuccess'));
     } else {
       // 新增用户
       // 验证两次密码是否一致
       if (values.password !== values.confirmPassword) {
-        message.error($t('page.user.passwordMismatch', { defaultValue: '两次输入的密码不一致' }));
+        message.error($t('page.user.passwordMismatch'));
         submitting.value = false;
         return;
       }
@@ -136,7 +245,7 @@ async function handleSubmit(values: any) {
       };
 
       await createUserApi(params);
-      message.success($t('page.user.addUserSuccess', { defaultValue: '用户添加成功' }));
+      message.success($t('page.user.addUserSuccess'));
     }
 
     // 设置状态标记操作成功
@@ -146,115 +255,24 @@ async function handleSubmit(values: any) {
     modalApi.close();
 
   } catch (error) {
-    message.error(isEdit.value
-      ? $t('page.user.updateUserError', { defaultValue: '更新用户失败' })
-      : $t('page.user.addUserError', { defaultValue: '添加用户失败' })
-    );
+    if (values._formMode === 'password') {
+      message.error($t('page.user.passwordChangeError'));
+    } else if (values._formMode === 'edit') {
+      message.error($t('page.user.updateUserError'));
+    } else {
+      message.error($t('page.user.addUserError'));
+    }
   } finally {
     submitting.value = false;
   }
 }
-
-// 表单配置
-const [UserForm, userFormApi] = useVbenForm({
-  layout: 'vertical',
-  handleSubmit,
-  submitButtonOptions: {
-    content: $t('page.common.save', { defaultValue: '保存' }),
-    disabled: false,
-    loading: submitting.value,
-  },
-  resetButtonOptions: {
-    content: $t('page.common.clear', { defaultValue: '清空' }),
-  },
-  commonConfig: {
-    componentProps: {
-      class: 'w-full',
-    },
-  },
-  schema: [
-    {
-      component: 'Input',
-      componentProps: {
-        placeholder: $t('page.user.usernamePlaceholder', { defaultValue: '请输入用户名' }),
-      },
-      fieldName: 'username',
-      label: $t('page.user.username', { defaultValue: '用户名' }),
-      rules: 'required',
-    },
-    {
-      component: 'Input',
-      componentProps: {
-        placeholder: $t('page.user.phonePlaceholder', { defaultValue: '请输入手机号' }),
-        maxlength: 11,
-      },
-      fieldName: 'phone',
-      label: $t('page.user.phone', { defaultValue: '手机号' }),
-      rules: z.string().regex(/^1[3-9]\d{9}$/, $t('page.user.phoneFormatError', { defaultValue: '请输入正确的手机号格式' })),
-    },
-    {
-      component: 'InputPassword',
-      componentProps: {
-        placeholder: $t('page.user.passwordPlaceholder', { defaultValue: '请输入密码' }),
-      },
-      fieldName: 'password',
-      label: $t('page.user.password', { defaultValue: '密码' }),
-      rules: z.string().min(6, $t('page.user.passwordLengthError', { defaultValue: '密码长度不能少于6位' })),
-    },
-    {
-      component: 'InputPassword',
-      componentProps: {
-        placeholder: $t('page.user.confirmPasswordPlaceholder', { defaultValue: '请确认密码' }),
-      },
-      fieldName: 'confirmPassword',
-      label: $t('page.user.confirmPassword', { defaultValue: '确认密码' }),
-      rules: 'required',
-    },
-    {
-      component: 'Select',
-      componentProps: {
-        placeholder: $t('page.user.rolePlaceholder', { defaultValue: '请选择角色' }),
-        options: [
-          { label: $t('page.user.roleAdmin', { defaultValue: '管理员' }), value: 'ADMIN' },
-          { label: $t('page.user.roleVip', { defaultValue: '会员' }), value: 'VIP' },
-          { label: $t('page.user.roleUser', { defaultValue: '用户' }), value: 'USER' }
-        ],
-      },
-      fieldName: 'role',
-      label: $t('page.user.role', { defaultValue: '角色' }),
-      defaultValue: 'USER',
-      rules: 'required',
-    },
-    {
-      component: 'RadioGroup',
-      componentProps: {
-        options: [
-          { label: $t('page.user.statusEnabled', { defaultValue: '启用' }), value: 'true' },
-          { label: $t('page.user.statusDisabled', { defaultValue: '禁用' }), value: 'false' }
-        ],
-      },
-      fieldName: 'isEnabled',
-      label: $t('page.user.status', { defaultValue: '状态' }),
-      defaultValue: 'true',
-    },
-    {
-      component: 'Input',
-      componentProps: {
-        placeholder: $t('page.user.pushplusTokenPlaceholder', { defaultValue: '请输入推送加Token，不需要请留空' }),
-      },
-      fieldName: 'pushplusToken',
-      label: $t('page.user.pushplusToken', { defaultValue: '推送加Token' }),
-    },
-  ],
-});
-
 </script>
 
 <template>
   <Modal>
     <div class="user-modal p-4">
       <div v-if="loading" class="flex-center py-10">
-        <div class="text-center">{{ $t('page.common.loading', { defaultValue: '加载中...' }) }}</div>
+        <div class="text-center">{{ $t('page.common.loading') }}</div>
       </div>
       <div v-else>
         <UserForm />
@@ -266,6 +284,16 @@ const [UserForm, userFormApi] = useVbenForm({
 <style scoped>
 .user-modal {
   min-height: 300px;
-  width: 500px;
+  max-width: 500px;
+  width: auto;
+  overflow-x: hidden;
+}
+
+/* 修复密码输入框样式 */
+:deep(.ant-input-password-icon) {
+  margin: 0;
+  height: 100%;
+  display: flex;
+  align-items: center;
 }
 </style>

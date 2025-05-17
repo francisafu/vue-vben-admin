@@ -69,13 +69,24 @@
     "userManagement": "用户管理",
     "addUser": "新增用户",
     "editUser": "编辑用户",
+    "changePassword": "修改密码",
+    "passwordChangeSuccess": "密码修改成功",
+    "passwordChangeError": "修改密码失败",
+    "noPasswordChange": "未修改密码",
     "username": "用户名",
     "usernamePlaceholder": "请输入用户名",
     "password": "密码",
     "passwordPlaceholder": "请输入密码",
     "passwordEditPlaceholder": "不修改请留空",
+    "passwordLengthError": "密码长度不能少于6位",
+    "confirmPassword": "确认密码",
+    "confirmPasswordPlaceholder": "请确认密码",
+    "passwordMismatch": "两次输入的密码不一致",
     "phone": "手机号",
     "phonePlaceholder": "请输入手机号",
+    "phoneFormatError": "请输入正确的手机号格式",
+    "pushplusToken": "推送加Token",
+    "pushplusTokenPlaceholder": "请输入推送加Token，不需要请留空",
     "role": "角色",
     "roleAdmin": "管理员",
     "roleVip": "会员",
@@ -106,6 +117,36 @@
     "disableUserError": "禁用用户失败",
     "loadingUserData": "加载用户数据中..."
   },
+  "activity": {
+    "title": "活动管理",
+    "content": "这里是活动管理页面的内容"
+  },
+  "dashboard": {
+    "analytics": {
+      "userCount": "用户量",
+      "totalUserCount": "总用户量",
+      "visitCount": "访问量",
+      "totalVisitCount": "总访问量",
+      "downloadCount": "下载量",
+      "totalDownloadCount": "总下载量",
+      "usageCount": "使用量",
+      "totalUsageCount": "总使用量",
+      "trafficTrend": "流量趋势",
+      "monthlyVisits": "月访问量",
+      "visitsCount": "访问数量",
+      "visitsSource": "访问来源",
+      "searchEngine": "搜索引擎",
+      "directAccess": "直接访问",
+      "emailMarketing": "邮件营销",
+      "allianceAds": "联盟广告",
+      "outsourcing": "外包",
+      "customization": "定制",
+      "technicalSupport": "技术支持",
+      "remote": "远程",
+      "businessRatio": "商业占比",
+      "month": "月"
+    }
+  },
   "official":{
     "title": "官网",
     "loreal": "欧莱雅",
@@ -127,6 +168,9 @@
     "delete": "删除",
     "search": "搜索",
     "yes": "是",
-    "no": "否"
+    "no": "否",
+    "total": "共",
+    "items": "条记录",
+    "loading": "加载中..."
   }
 }

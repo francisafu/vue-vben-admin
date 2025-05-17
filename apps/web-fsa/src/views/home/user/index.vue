@@ -1,17 +1,18 @@
 <script setup lang="ts">
 import type { UserApi } from '#/api/core/user';
 
-import { onMounted, ref } from 'vue';
+import { onMounted, ref, reactive, h } from 'vue';
 
 import { Page, useVbenModal } from '@vben/common-ui';
 
-import { Button, Card, Input, message, Select } from 'ant-design-vue';
+import { Button, Card, Input, message, Select, Table } from 'ant-design-vue';
+import type { TablePaginationConfig, ColumnsType } from 'ant-design-vue/es/table';
 
-import { useVbenVxeGrid } from '#/adapter/vxe-table';
 import { $t } from '#/locales';
 import {
   listUsersApi,
-  deleteUserApi
+  deleteUserApi,
+  updateUserApi
 } from '#/api/core/user';
 
 import UserModal from './user-modal.vue';
@@ -19,10 +20,13 @@ import UserModal from './user-modal.vue';
 // 用户数据
 const userList = ref<UserApi.UserItem[]>([]);
 const loading = ref(false);
-const pagination = ref({
+const pagination = reactive<TablePaginationConfig>({
   current: 1,
   pageSize: 10,
-  total: 0
+  total: 0,
+  showSizeChanger: true,
+  pageSizeOptions: ['10', '20', '50', '100'],
+  showTotal: (total) => `${$t('page.common.total')} ${total} ${$t('page.common.items')}`
 });
 
 // 搜索参数
@@ -47,65 +51,101 @@ const [Modal, modalApi] = useVbenModal({
   }
 });
 
-// 表格设置
-const gridOptions = {
-  border: true,
-  height: 500,
-  showOverflow: true,
-  columnConfig: {
-    resizable: true,
-  },
-  pagerConfig: {
-    enabled: true,
-    pageSize: 10,
-    pageSizes: [10, 20, 50, 100],
-    layouts: ['PrevPage', 'JumpNumber', 'NextPage', 'FullJump', 'Sizes', 'Total'],
-    total: 0,
-    currentPage: 1,
-    onPageChange: handlePageChange
-  },
-  columns: [
-    { title: $t('page.common.seqNo', { defaultValue: '序号' }), type: 'seq', width: 60 },
-    { field: 'username', title: $t('page.user.username', { defaultValue: '用户名' }), minWidth: 120 },
-    { field: 'phone', title: $t('page.user.phone', { defaultValue: '手机号' }), minWidth: 120 },
-    {
-      field: 'role',
-      title: $t('page.user.role', { defaultValue: '角色' }),
-      minWidth: 120,
-      formatter: ({ cellValue }: { cellValue: string }) => {
-        const roleMap: Record<string, string> = {
-          'ADMIN': $t('page.user.roleAdmin', { defaultValue: '管理员' }),
-          'VIP': $t('page.user.roleVip', { defaultValue: '会员' }),
-          'USER': $t('page.user.roleUser', { defaultValue: '用户' })
-        };
-        return roleMap[cellValue] || cellValue;
-      }
-    },
-    {
-      field: 'isEnabled',
-      title: $t('page.user.status', { defaultValue: '状态' }),
-      minWidth: 100,
-      slots: { default: 'status' }
-    },
-    {
-      field: 'action',
-      title: $t('page.common.action', { defaultValue: '操作' }),
-      minWidth: 180,
-      slots: { default: 'action' }
-    },
-  ],
-  // 表格样式
-  // 关键：使用fit让内容自动填充表格宽度
-  fit: true,
-  // 使用响应式表格
-  size: 'medium'
-} as any;
+// 处理状态切换
+async function handleToggleStatus(row: UserApi.UserItem) {
+  try {
+    loading.value = true;
+    // 构造更新参数，仅包含状态字段，反转当前状态
+    const params: UserApi.UpdateUserParams = {
+      isEnabled: !row.isEnabled
+    };
+    
+    await updateUserApi(row.id, params);
+    
+    if (row.isEnabled) {
+      message.success($t('page.user.disableUserSuccess'));
+    } else {
+      message.success($t('page.user.enableUserSuccess'));
+    }
+    
+    // 刷新用户列表
+    await fetchUserList();
+  } catch (error) {
+    if (row.isEnabled) {
+      message.error($t('page.user.disableUserError'));
+    } else {
+      message.error($t('page.user.enableUserError'));
+    }
+  } finally {
+    loading.value = false;
+  }
+}
 
-const [Grid, gridApi] = useVbenVxeGrid({ gridOptions });
+// 表格列定义
+const columns: ColumnsType = [
+  {
+    title: $t('page.common.seqNo'),
+    key: 'seq',
+    width: 60,
+    customRender: ({ index }: { index: number }) => {
+      return (pagination.current! - 1) * pagination.pageSize! + index + 1;
+    }
+  },
+  {
+    title: $t('page.user.username'),
+    dataIndex: 'username',
+    key: 'username',
+    minWidth: 120
+  },
+  {
+    title: $t('page.user.phone'),
+    dataIndex: 'phone',
+    key: 'phone',
+    minWidth: 120
+  },
+  {
+    title: $t('page.user.role'),
+    dataIndex: 'role',
+    key: 'role',
+    minWidth: 120,
+    customRender: ({ text }: { text: string }) => {
+      const roleMap: Record<string, string> = {
+        'ADMIN': $t('page.user.roleAdmin'),
+        'VIP': $t('page.user.roleVip'),
+        'USER': $t('page.user.roleUser')
+      };
+      return roleMap[text] || text;
+    }
+  },
+  {
+    title: $t('page.user.status'),
+    dataIndex: 'isEnabled',
+    key: 'isEnabled',
+    minWidth: 100,
+    customRender: ({ record }: { record: UserApi.UserItem }) => {
+      const isEnabled = record.isEnabled;
+      return h(Button, {
+        type: isEnabled ? 'primary' : 'default',
+        danger: !isEnabled,
+        size: 'small',
+        onClick: () => handleToggleStatus(record),
+        style: isEnabled ? { backgroundColor: '#52c41a', borderColor: '#52c41a' } : {}
+      }, () => isEnabled 
+        ? $t('page.user.statusEnabled')
+        : $t('page.user.statusDisabled')
+      );
+    }
+  },
+  {
+    title: $t('page.common.action'),
+    key: 'action',
+    minWidth: 180
+  }
+];
 
 // 创建用户按钮
 function handleCreateUser() {
-  modalApi.setState({ title: $t('page.user.addUser', { defaultValue: '新增用户' }) }).setData({
+  modalApi.setState({ title: $t('page.user.addUser') }).setData({
     userData: null,
     isEdit: false
   }).open();
@@ -113,9 +153,17 @@ function handleCreateUser() {
 
 // 编辑用户按钮
 function handleEditUser(row: UserApi.UserItem) {
-  modalApi.setState({ title: $t('page.user.editUser', { defaultValue: '编辑用户' }) }).setData({
+  modalApi.setState({ title: $t('page.user.editUser') }).setData({
     userData: row,
     isEdit: true
+  }).open();
+}
+
+// 修改密码按钮
+function handleChangePassword(row: UserApi.UserItem) {
+  modalApi.setState({ title: $t('page.user.changePassword') }).setData({
+    userData: row,
+    isPasswordMode: true
   }).open();
 }
 
@@ -124,12 +172,12 @@ async function handleDeleteUser(row: UserApi.UserItem) {
   try {
     loading.value = true;
     await deleteUserApi(row.id);
-    message.success($t('page.user.deleteUserSuccess', { defaultValue: '用户删除成功' }));
+    message.success($t('page.user.deleteUserSuccess'));
 
     // 刷新用户列表
     await fetchUserList();
   } catch (error) {
-    message.error($t('page.user.deleteUserError', { defaultValue: '删除用户失败' }));
+    message.error($t('page.user.deleteUserError'));
   } finally {
     loading.value = false;
   }
@@ -141,49 +189,31 @@ async function fetchUserList() {
     loading.value = true;
     const res = await listUsersApi({
       ...searchParams.value,
-      page: pagination.value.current,
-      pageSize: pagination.value.pageSize
+      page: pagination.current || 1,
+      pageSize: pagination.pageSize || 10
     });
 
     userList.value = res.list;
-    pagination.value = {
-      current: res.pagination.current,
-      pageSize: res.pagination.pageSize,
-      total: res.pagination.total
-    };
-    console.log(pagination.value);
-
-    // 更新表格数据和分页信息
-    if (gridApi.grid) {
-      // 更新表格数据
-      gridApi.grid.loadData(userList.value);
-
-      // 关键修复：直接设置pagerConfig的total属性
-      if (gridApi.grid.pagerConfig) {
-        gridApi.grid.pagerConfig.total = pagination.value.total;
-      }
-
-      // 手动刷新表格
-      gridApi.grid.refreshScroll();
-      gridApi.grid.recalculate();
-    }
+    pagination.current = res.pagination.current;
+    pagination.pageSize = res.pagination.pageSize;
+    pagination.total = res.pagination.total;
   } catch (error) {
-    message.error($t('page.user.fetchUserListError', { defaultValue: '获取用户列表失败' }));
+    message.error($t('page.user.fetchUserListError'));
   } finally {
     loading.value = false;
   }
 }
 
-// 处理分页变化
-function handlePageChange({ pageSize, currentPage }: { pageSize: number; currentPage: number }) {
-  pagination.value.current = currentPage;
-  pagination.value.pageSize = pageSize;
+// 处理表格变化（分页、排序、筛选）
+function handleTableChange(pag: TablePaginationConfig) {
+  pagination.current = pag.current;
+  pagination.pageSize = pag.pageSize;
   fetchUserList();
 }
 
 // 处理搜索
 function handleSearch() {
-  pagination.value.current = 1;
+  pagination.current = 1;
   fetchUserList();
 }
 
@@ -196,7 +226,7 @@ function handleReset() {
     role: undefined,
     isEnabled: undefined
   };
-  pagination.value.current = 1;
+  pagination.current = 1;
   fetchUserList();
 }
 
@@ -210,55 +240,55 @@ onMounted(async () => {
   <Page>
     <Modal />
     <div class="p-4">
-      <h1 class="mb-4 text-2xl font-bold">{{ $t('page.user.title', { defaultValue: '用户管理' }) }}</h1>
+      <h1 class="mb-4 text-2xl font-bold">{{ $t('page.user.title') }}</h1>
 
       <!-- 搜索表单Card -->
       <Card :bordered="false" class="mb-4">
         <div class="flex flex-wrap items-center gap-4">
           <div class="flex items-center">
-            <span class="mr-2">{{ $t('page.user.keyword', { defaultValue: '关键字' }) }}</span>
+            <span class="mr-2">{{ $t('page.user.keyword') }}</span>
             <Input
               v-model:value="searchParams.keyword"
-              :placeholder="$t('page.user.keywordPlaceholder', { defaultValue: '用户名/手机号' })"
+              :placeholder="$t('page.user.keywordPlaceholder')"
               style="width: 200px"
               @pressEnter="handleSearch"
             />
           </div>
 
           <div class="flex items-center">
-            <span class="mr-2">{{ $t('page.user.role', { defaultValue: '角色' }) }}</span>
+            <span class="mr-2">{{ $t('page.user.role') }}</span>
             <Select
               v-model:value="searchParams.role"
-              :placeholder="$t('page.user.rolePlaceholder', { defaultValue: '选择角色' })"
+              :placeholder="$t('page.user.rolePlaceholder')"
               style="width: 120px"
               allowClear
             >
-              <Select.Option value="ADMIN">{{ $t('page.user.roleAdmin', { defaultValue: '管理员' }) }}</Select.Option>
-              <Select.Option value="VIP">{{ $t('page.user.roleVip', { defaultValue: '会员' }) }}</Select.Option>
-              <Select.Option value="USER">{{ $t('page.user.roleUser', { defaultValue: '用户' }) }}</Select.Option>
+              <Select.Option value="ADMIN">{{ $t('page.user.roleAdmin') }}</Select.Option>
+              <Select.Option value="VIP">{{ $t('page.user.roleVip') }}</Select.Option>
+              <Select.Option value="USER">{{ $t('page.user.roleUser') }}</Select.Option>
             </Select>
           </div>
 
           <div class="flex items-center">
-            <span class="mr-2">{{ $t('page.user.status', { defaultValue: '状态' }) }}</span>
+            <span class="mr-2">{{ $t('page.user.status') }}</span>
             <Select
               v-model:value="searchParams.isEnabled"
-              :placeholder="$t('page.user.statusPlaceholder', { defaultValue: '选择状态' })"
+              :placeholder="$t('page.user.statusPlaceholder')"
               style="width: 120px"
               allowClear
             >
-              <Select.Option value="true">{{ $t('page.user.statusEnabled', { defaultValue: '启用' }) }}</Select.Option>
-              <Select.Option value="false">{{ $t('page.user.statusDisabled', { defaultValue: '禁用' }) }}</Select.Option>
+              <Select.Option value="true">{{ $t('page.user.statusEnabled') }}</Select.Option>
+              <Select.Option value="false">{{ $t('page.user.statusDisabled') }}</Select.Option>
             </Select>
           </div>
 
           <div class="flex items-center ml-4">
             <Button type="primary" @click="handleSearch" class="mr-2">
-              {{ $t('page.common.search', { defaultValue: '搜索' }) }}
+              {{ $t('page.common.search') }}
             </Button>
 
             <Button @click="handleReset">
-              {{ $t('page.common.clear', { defaultValue: '重置' }) }}
+              {{ $t('page.common.clear') }}
             </Button>
           </div>
         </div>
@@ -268,28 +298,34 @@ onMounted(async () => {
       <Card :bordered="false">
         <template #extra>
           <Button type="primary" @click="handleCreateUser">
-            {{ $t('page.user.addUser', { defaultValue: '新增用户' }) }}
+            {{ $t('page.user.addUser') }}
           </Button>
         </template>
 
         <div style="width: 100%">
-          <Grid ref="gridRef" :loading="loading">
-            <template #status="{ row }">
-              <span :class="row.isEnabled ? 'text-success' : 'text-danger'">
-                {{ row.isEnabled
-                  ? $t('page.user.statusEnabled', { defaultValue: '启用' })
-                  : $t('page.user.statusDisabled', { defaultValue: '禁用' })
-                }}
-              </span>
+          <Table 
+            :columns="columns" 
+            :dataSource="userList" 
+            :pagination="pagination"
+            :loading="loading"
+            rowKey="id"
+            :scroll="{ y: 500 }"
+            @change="handleTableChange"
+          >
+            <template #bodyCell="{ column, record }">
+              <template v-if="column.key === 'action'">
+                <Button type="link" @click="() => handleEditUser(record as unknown as UserApi.UserItem)">
+                  {{ $t('page.common.edit') }}
+                </Button>
+                <Button type="link" style="color: #faad14" @click="() => handleChangePassword(record as unknown as UserApi.UserItem)">
+                  {{ $t('page.user.changePassword') }}
+                </Button>
+                <Button type="link" danger @click="() => handleDeleteUser(record as unknown as UserApi.UserItem)">
+                  {{ $t('page.common.delete') }}
+                </Button>
+              </template>
             </template>
-
-            <template #action="{ row }">
-              <Button type="link" @click="handleEditUser(row)">{{ $t('page.common.edit', { defaultValue: '编辑' }) }}</Button>
-              <Button type="link" danger @click="handleDeleteUser(row)">
-                {{ $t('page.common.delete', { defaultValue: '删除' }) }}
-              </Button>
-            </template>
-          </Grid>
+          </Table>
         </div>
       </Card>
     </div>
