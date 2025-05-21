@@ -148,6 +148,18 @@
     "editActivity": "编辑活动",
     "linkUsers": "关联用户",
     "linkUsersDescription": "在这里可以管理与该活动关联的用户",
+    "accountLimit": "账号限制",
+    "accountLimitPlaceholder": "请输入账号限制",
+    "selectUserPlaceholder": "请选择用户",
+    "selectUserWarning": "请选择要添加的用户",
+    "userNotFoundWarning": "未找到选中的用户",
+    "userAlreadyExistsWarning": "该用户已关联到本活动",
+    "addUser": "添加用户",
+    "activityInfo": "活动信息",
+    "noLinkedUsers": "暂无关联用户",
+    "updateLinksSuccess": "用户关联更新成功",
+    "updateLinksError": "用户关联更新失败",
+    "fetchActivityUsersError": "获取活动关联用户失败",
     "deleteActivitySuccess": "删除活动成功",
     "deleteActivityError": "删除活动失败",
     "fetchActivityListError": "获取活动列表失败",
@@ -208,6 +220,7 @@
     "no": "否",
     "total": "共",
     "items": "条记录",
-    "loading": "加载中..."
+    "loading": "加载中...",
+    "cancel": "取消"
   }
 }

@@ -10,6 +10,7 @@ export namespace UserApi {
     keyword?: string;
     role?: string;
     isEnabled?: string;
+    all?: boolean;
   }
 
   /** 用户列表返回的用户信息 */
