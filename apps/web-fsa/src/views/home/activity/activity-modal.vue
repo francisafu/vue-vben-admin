@@ -9,7 +9,6 @@ import {
   updateActivityApi
 } from '#/api/core/activity';
 import { message } from 'ant-design-vue';
-import type { ActivityApi } from '#/api/core/activity';
 import dayjs from 'dayjs';
 
 // 表单数据

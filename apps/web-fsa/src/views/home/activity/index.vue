@@ -5,7 +5,7 @@ import { onMounted, ref, reactive, h } from 'vue';
 
 import { Page, useVbenModal } from '@vben/common-ui';
 
-import { Button, Card, message, Select, Table, DatePicker } from 'ant-design-vue';
+import { Button, Card, message, Select, Table, DatePicker, Tag } from 'ant-design-vue';
 import type { TablePaginationConfig, ColumnsType } from 'ant-design-vue/es/table';
 
 import { $t } from '#/locales';
@@ -15,6 +15,7 @@ import {
 } from '#/api/core/activity';
 
 import ActivityModal from './activity-modal.vue';
+import ActivityLinkUsersModal from './activity-linkusers-modal.vue';
 import dayjs from 'dayjs';
 
 // 活动数据
@@ -50,6 +51,19 @@ const [Modal, modalApi] = useVbenModal({
   }
 });
 
+const [LinkUsersModal, linkUsersModalApi] = useVbenModal({
+  connectedComponent: ActivityLinkUsersModal,
+  onOpenChange: async (isOpen: boolean) => {
+    if (!isOpen) {
+      const data = linkUsersModalApi.getData<Record<string, any>>();
+      if (data && data.operationSuccess) {
+        // 用户关联操作成功后，刷新活动列表
+        await fetchActivityList();
+      }
+    }
+  }
+});
+
 // 品牌映射
 const brandMap: Record<string, string> = {
   'LOREAL': $t('page.activity.brandLOREAL'),
@@ -64,11 +78,11 @@ function getActivityStatus(startTime: string, endTime: string) {
   const end = dayjs(endTime);
 
   if (now.isBefore(start)) {
-    return { text: $t('page.activity.statusNotStarted'), type: 'default' };
+    return { text: $t('page.activity.statusNotStarted'), type: 'blue' };
   } else if (now.isAfter(end)) {
-    return { text: $t('page.activity.statusEnded'), type: 'danger' };
+    return { text: $t('page.activity.statusEnded'), type: 'red' };
   } else {
-    return { text: $t('page.activity.statusInProgress'), type: 'success' };
+    return { text: $t('page.activity.statusInProgress'), type: 'green' };
   }
 }
 
@@ -121,16 +135,8 @@ const columns: ColumnsType = [
     minWidth: 100,
     customRender: ({ record }: { record: ActivityApi.ActivityItem }) => {
       const status = getActivityStatus(record.startTime, record.endTime);
-      const buttonType = status.type === 'success' ? 'primary' : 
-                         status.type === 'danger' ? 'danger' : 'default';
-      
-      const buttonStyle = status.type === 'success' ? 
-        { backgroundColor: '#52c41a', borderColor: '#52c41a' } : {};
-      
-      return h(Button, {
-        type: buttonType as 'primary' | 'default' | 'dashed' | 'text' | 'link',
-        size: 'small',
-        style: buttonStyle
+      return h(Tag, {
+        color: status.type
       }, () => status.text);
     }
   },
@@ -189,6 +195,13 @@ async function handleDeleteActivity(row: ActivityApi.ActivityItem) {
   } finally {
     loading.value = false;
   }
+}
+
+// 关联用户按钮
+function handleLinkUsers(row: ActivityApi.ActivityItem) {
+  linkUsersModalApi.setState({ title: $t('page.activity.linkUsers') }).setData({
+    activityData: row
+  }).open();
 }
 
 // 获取活动列表
@@ -264,6 +277,7 @@ onMounted(async () => {
 <template>
   <Page>
     <Modal />
+    <LinkUsersModal />
     <div class="p-4">
       <h1 class="mb-4 text-2xl font-bold">{{ $t('page.activity.title') }}</h1>
 
@@ -328,6 +342,9 @@ onMounted(async () => {
               <template v-if="column.key === 'action'">
                 <Button type="link" @click="() => handleEditActivity(record as unknown as ActivityApi.ActivityItem)">
                   {{ $t('page.common.edit') }}
+                </Button>
+                <Button type="link" style="color: #faad14" @click="() => handleLinkUsers(record as unknown as ActivityApi.ActivityItem)">
+                  {{ $t('page.activity.linkUsers') }}
                 </Button>
                 <Button type="link" danger @click="() => handleDeleteActivity(record as unknown as ActivityApi.ActivityItem)">
                   {{ $t('page.common.delete') }}

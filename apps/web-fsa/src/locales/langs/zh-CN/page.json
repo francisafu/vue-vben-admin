@@ -146,6 +146,8 @@
     "taskCount": "任务总数",
     "addActivity": "新增活动",
     "editActivity": "编辑活动",
+    "linkUsers": "关联用户",
+    "linkUsersDescription": "在这里可以管理与该活动关联的用户",
     "deleteActivitySuccess": "删除活动成功",
     "deleteActivityError": "删除活动失败",
     "fetchActivityListError": "获取活动列表失败",
