@@ -20,6 +20,7 @@ export namespace ActivityApi {
     userCount: number;
     taskCount: number;
     accountTotal: number;
+    accountLimitTotal: number;
   }
 
   /** 活动列表返回结果 */
@@ -93,16 +94,6 @@ export namespace ActivityApi {
     failed: number;
     details: LinkUserResultItem[];
   }
-
-  /** 活动关联的用户信息 */
-  export interface ActivityUserDetail {
-    userId: number;
-    username: string;
-    phone: string;
-    role: string;
-    isEnabled: boolean;
-    accountLimit: number;
-  }
 }
 
 /**
@@ -156,14 +147,5 @@ export async function updateActivityUsersApi(
   return requestClient.post<ActivityApi.LinkUsersResult>(
     `/activities/${id}/updatelinks`,
     data,
-  );
-}
-
-/**
- * 获取活动关联的用户列表
- */
-export async function getActivityUsersApi(id: number) {
-  return requestClient.post<ActivityApi.ActivityUserDetail[]>(
-    `/activities/${id}/listlinks`
   );
 }

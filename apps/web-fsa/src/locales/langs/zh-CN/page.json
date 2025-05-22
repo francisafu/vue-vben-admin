@@ -143,11 +143,12 @@
     "statusEnded": "已结束",
     "userCount": "参与用户数",
     "accountTotal": "账号总数",
+    "accountInfo": "账号情况",
     "taskCount": "任务总数",
     "addActivity": "新增活动",
     "editActivity": "编辑活动",
-    "linkUsers": "关联用户",
-    "linkUsersDescription": "在这里可以管理与该活动关联的用户",
+    "linkUsers": "用户",
+    "linkUsersDescription": "关联用户管理",
     "accountLimit": "账号限制",
     "accountLimitPlaceholder": "请输入账号限制",
     "selectUserPlaceholder": "请选择用户",
@@ -221,6 +222,8 @@
     "total": "共",
     "items": "条记录",
     "loading": "加载中...",
-    "cancel": "取消"
+    "cancel": "取消",
+    "add": "添加",
+    "confirmDelete": "确定要删除吗？"
   }
 }
