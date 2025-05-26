@@ -94,6 +94,14 @@ export namespace ActivityApi {
     failed: number;
     details: LinkUserResultItem[];
   }
+
+  /** 用户活动列表项 */
+  export interface UserActivityItem {
+    id: number;
+    brand: string;
+    startTime: string;
+    endTime: string;
+  }
 }
 
 /**
@@ -148,4 +156,11 @@ export async function updateActivityUsersApi(
     `/activities/${id}/updatelinks`,
     data,
   );
+}
+
+/**
+ * 获取当前用户参与的活动列表
+ */
+export async function getUserActivitiesApi() {
+  return requestClient.post<ActivityApi.UserActivityItem[]>('/activities/myactivity');
 }

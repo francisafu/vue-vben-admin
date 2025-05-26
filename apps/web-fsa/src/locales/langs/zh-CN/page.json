@@ -16,7 +16,7 @@
     "accountManage": "个人中心",
     "userManage": "用户管理",
     "activityManage": "活动管理",
-    "taskManage": "任务管理"
+    "accountInfoManage": "抢购管理"
   },
   "account": {
     "title": "个人中心",
@@ -63,6 +63,38 @@
     "updateAddressError": "更新地址失败",
     "addAddressSuccess": "地址添加成功",
     "addAddressError": "添加地址失败"
+  },
+  "accountInfo": {
+    "title": "抢购管理",
+    "selectActivity": "选择活动",
+    "selectActivityPlaceholder": "请选择活动",
+    "activityInfo": "活动信息",
+    "brand": "品牌",
+    "startTime": "开始时间",
+    "endTime": "结束时间",
+    "currentTime": "当前时间",
+    "accountLimit": "账号限制",
+    "accountUsage": "账号情况",
+    "account": "账号",
+    "password": "密码",
+    "address": "地址",
+    "taskCount": "任务总数",
+    "noAccountData": "暂无抢购账号数据",
+    "pleaseSelectActivity": "请先选择活动",
+    "fetchActivitiesError": "获取用户活动列表失败",
+    "fetchAccountInfoError": "获取抢购账号列表失败",
+    "addAccountInfo": "新建账号",
+    "editAccountInfo": "编辑账号",
+    "accountInfoManagement": "抢购账号管理",
+    "accountPlaceholder": "请输入账号",
+    "passwordPlaceholder": "请输入密码",
+    "addressPlaceholder": "请选择地址",
+    "addAccountInfoSuccess": "新建账号成功",
+    "addAccountInfoError": "新建账号失败",
+    "updateAccountInfoSuccess": "更新账号成功",
+    "updateAccountInfoError": "更新账号失败",
+    "deleteAccountInfoSuccess": "删除账号成功",
+    "deleteAccountInfoError": "删除账号失败"
   },
   "user": {
     "title": "用户管理",

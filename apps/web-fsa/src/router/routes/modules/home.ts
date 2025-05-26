@@ -7,7 +7,7 @@ const routes: RouteRecordRaw[] = [
     meta: {
       icon: 'lucide:home',
       order: 1,
-      title: $t('page.home.title', { defaultValue: '主页' }),
+      title: $t('page.home.title'),
     },
     name: 'Home',
     path: '/home',
@@ -18,7 +18,7 @@ const routes: RouteRecordRaw[] = [
         component: () => import('#/views/home/workspace/index.vue'),
         meta: {
           icon: 'carbon:workspace',
-          title: $t('page.home.workspace', { defaultValue: '工作台' }),
+          title: $t('page.home.workspace'),
         },
       },
       {
@@ -27,7 +27,7 @@ const routes: RouteRecordRaw[] = [
         component: () => import('#/views/home/account/index.vue'),
         meta: {
           icon: 'lucide:user-circle',
-          title: $t('page.home.accountManage', { defaultValue: '个人中心' }),
+          title: $t('page.home.accountManage'),
         },
       },
       {
@@ -37,7 +37,7 @@ const routes: RouteRecordRaw[] = [
         meta: {
           authority: ['ADMIN'],
           icon: 'lucide:users',
-          title: $t('page.home.userManage', { defaultValue: '用户管理' }),
+          title: $t('page.home.userManage'),
         },
       },
       {
@@ -47,16 +47,16 @@ const routes: RouteRecordRaw[] = [
         meta: {
           authority: ['ADMIN'],
           icon: 'lucide:calendar',
-          title: $t('page.home.activityManage', { defaultValue: '活动管理' }),
+          title: $t('page.home.activityManage'),
         },
       },
       {
-        name: 'TaskManage',
-        path: '/home/task',
-        component: () => import('#/views/home/task/index.vue'),
+        name: 'AccountInfoManage',
+        path: '/home/account-info',
+        component: () => import('#/views/home/account-info/index.vue'),
         meta: {
           icon: 'lucide:list-todo',
-          title: $t('page.home.taskManage', { defaultValue: '任务管理' }),
+          title: $t('page.home.accountInfoManage'),
         },
       },
     ],
