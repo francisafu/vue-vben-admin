@@ -34,6 +34,11 @@ const currentTime = ref(dayjs().format('YYYY-MM-DD HH:mm:ss'));
 // 显示/隐藏状态
 const showAccount = ref(true);
 const showPassword = ref(true);
+const showAddress = ref(true);
+
+// 任务相关状态
+const accountTasksMap = ref<Record<number, AccountInfoApi.TaskInfo[]>>({});
+const accountTasksLoadingMap = ref<Record<number, boolean>>({});
 
 // Modal配置
 const [Modal, modalApi] = useVbenModal({
@@ -101,6 +106,11 @@ function togglePasswordVisibility() {
   showPassword.value = !showPassword.value;
 }
 
+// 切换地址显示状态
+function toggleAddressVisibility() {
+  showAddress.value = !showAddress.value;
+}
+
 // 格式化账号显示
 function formatAccount(account: string) {
   if (showAccount.value) {
@@ -115,6 +125,18 @@ function formatPassword(password: string) {
     return password;
   }
   return '*'.repeat(password.length);
+}
+
+// 格式化地址显示
+function formatAddress(address: any) {
+  if (!address) return '';
+  
+  const fullAddress = `${address.userName || ''} ${address.mobilePhone || ''} ${address.provinceName || ''}${address.cityName || ''}${address.districtName || ''}${address.addrDetail || ''}`;
+  
+  if (showAddress.value) {
+    return fullAddress;
+  }
+  return '*'.repeat(fullAddress.length);
 }
 
 // 表格列定义
@@ -168,13 +190,25 @@ const columns: ColumnsType = [
     }
   },
   {
-    title: $t('page.accountInfo.address'),
+    title: () => {
+      return h('div', { style: 'display: flex; align-items: center; justify-content: space-between;' }, [
+        h('span', $t('page.accountInfo.address')),
+        h(Button, {
+          type: 'text',
+          size: 'small',
+          onClick: toggleAddressVisibility,
+          style: 'padding: 0; min-width: auto; height: auto;'
+        }, {
+          icon: () => showAddress.value ? h(Eye) : h(EyeOff)
+        })
+      ]);
+    },
     key: 'address',
     width: 200,
     customRender: ({ record }: { record: AccountInfoApi.AccountInfoItem }) => {
       const addr = record.address;
       if (!addr) return '';
-      return `${addr.userName || ''} ${addr.mobilePhone || ''} ${addr.provinceName || ''}${addr.cityName || ''}${addr.districtName || ''}${addr.addrDetail || ''}`;
+      return formatAddress(addr);
     }
   },
   {
@@ -182,6 +216,68 @@ const columns: ColumnsType = [
     dataIndex: 'taskCount',
     key: 'taskCount',
     width: 100
+  },
+  {
+    title: $t('page.common.action'),
+    key: 'action',
+    width: 160,
+    fixed: 'right'
+  }
+];
+
+// 任务子表格列定义
+const taskColumns: ColumnsType = [
+  {
+    title: $t('page.common.seqNo'),
+    key: 'seq',
+    width: 60,
+    customRender: ({ index }: { index: number }) => {
+      return index + 1;
+    }
+  },
+  {
+    title: '商品数量',
+    key: 'productCount',
+    width: 100,
+    customRender: ({ record }: { record: AccountInfoApi.TaskInfo }) => {
+      return record.products ? record.products.length : 0;
+    }
+  },
+  {
+    title: '订单间隔',
+    dataIndex: 'ordersDelay',
+    key: 'ordersDelay',
+    width: 100,
+    customRender: ({ text }: { text: number }) => {
+      return `${text}ms`;
+    }
+  },
+  {
+    title: '是否定时',
+    dataIndex: 'isScheduled',
+    key: 'isScheduled',
+    width: 100,
+    customRender: ({ text }: { text: boolean }) => {
+      return text ? '是' : '否';
+    }
+  },
+  {
+    title: '启动时间',
+    dataIndex: 'startTime',
+    key: 'startTime',
+    width: 170,
+    customRender: ({ text }: { text: string | null }) => {
+      return text ? dayjs(text).format('YYYY-MM-DD HH:mm:ss') : '-';
+    }
+  },
+  {
+    title: '是否轮询',
+    dataIndex: 'isPolling',
+    key: 'isPolling',
+    width: 100,
+    customRender: ({ text }: { text: boolean }) => {
+      return text ? '是' : '否';
+    }
   },
   {
     title: $t('page.common.action'),
@@ -226,6 +322,15 @@ async function fetchAccountInfoList() {
     
     accountInfoData.value = result;
     accountInfoList.value = result.accountInfos;
+    
+    // 提取任务数据到映射中
+    result.accountInfos.forEach(accountInfo => {
+      if (accountInfo.tasks && accountInfo.tasks.length > 0) {
+        accountTasksMap.value[accountInfo.id] = accountInfo.tasks;
+      } else {
+        accountTasksMap.value[accountInfo.id] = [];
+      }
+    });
   } catch (error) {
     message.error($t('page.accountInfo.fetchAccountInfoError'));
     accountInfoList.value = [];
@@ -281,6 +386,21 @@ async function handleDeleteAccountInfo(row: AccountInfoApi.AccountInfoItem) {
   } finally {
     loading.value = false;
   }
+}
+
+// 处理表格展开
+function handleExpand(expanded: boolean, record: AccountInfoApi.AccountInfoItem) {
+  if (expanded) {
+    // 如果任务数据还未加载或为空，则显示loading状态
+    if (!accountTasksMap.value[record.id]) {
+      accountTasksLoadingMap.value[record.id] = false; // 数据已经在fetchAccountInfoList中加载了
+    }
+  }
+}
+
+// 处理新建任务（暂时无功能）
+function handleCreateTask(accountId: number) {
+  message.info('新建任务功能即将开放，敬请期待！');
 }
 
 // 更新当前时间
@@ -360,15 +480,60 @@ onMounted(async () => {
           </Button>
         </template>
 
-        <div style="width: 100%; height: 600px;">
+        <div class="table-container">
           <Table 
             :columns="columns" 
             :dataSource="accountInfoList" 
             :loading="loading"
             rowKey="id"
-            :scroll="{ y: 500, x: 780 }"
+            :scroll="{ x: 780 }"
             :pagination="false"
+            @expand="handleExpand"
           >
+            <!-- 展开图标列添加标题 -->
+            <template #expandColumnTitle>
+              <span>任务列表</span>
+            </template>
+            
+            <!-- 展开行插槽 -->
+            <template #expandedRowRender="{ record }">
+              <div class="px-4">
+                <div class="flex justify-between items-center mb-2">
+                  <div class="font-medium">账号 {{ formatAccount(record.account) }} 的任务列表</div>
+                  <div>
+                    <Button 
+                      type="primary" 
+                      size="small" 
+                      @click="() => handleCreateTask(record.id)"
+                    >
+                      新建任务
+                    </Button>
+                  </div>
+                </div>
+                
+                <Table
+                  :columns="taskColumns"
+                  :dataSource="accountTasksMap[record.id] || []"
+                  :loading="accountTasksLoadingMap[record.id]"
+                  :pagination="false"
+                  size="small"
+                  rowKey="id"
+                  bordered
+                  :scroll="{ x: 1000 }"
+                >
+                  <template #bodyCell="{ column, record: taskRecord }">
+                    <template v-if="column.key === 'action'">
+                      <!-- 暂时留空，稍后添加任务操作按钮 -->
+                    </template>
+                  </template>
+                </Table>
+                
+                <div v-if="accountTasksMap[record.id]?.length === 0" class="py-4 text-center text-gray-500">
+                  该账号暂无任务
+                </div>
+              </div>
+            </template>
+
             <template #bodyCell="{ column, record }">
               <template v-if="column.key === 'action'">
                 <Button 
@@ -402,4 +567,35 @@ onMounted(async () => {
 
 <style scoped>
 /* 使用CSS变量确保颜色跟随主题变化 */
+.table-container {
+  width: 100%;
+  max-height: 80vh; /* 使用视口高度，更好地适应不同屏幕 */
+  min-height: 400px; /* 确保最小高度 */
+  overflow-y: auto;
+  overflow-x: hidden; /* 水平滚动由Table组件内部处理 */
+}
+
+/* 当表格内容较少时，让容器自然收缩 */
+.table-container :deep(.ant-table-wrapper) {
+  height: auto;
+}
+
+/* 优化滚动条样式 */
+.table-container::-webkit-scrollbar {
+  width: 6px;
+}
+
+.table-container::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+.table-container::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+.table-container::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
 </style>
