@@ -309,14 +309,15 @@ async function handleSubmit(values: any) {
 const [AddressForm, addressFormApi] = useVbenForm({
   layout: 'vertical',
   handleSubmit,
-  submitButtonOptions: {
+  submitButtonOptions: computed(() => ({
     content: $t('page.common.save'),
-    disabled: false,
-    loading: false,
-  },
-  resetButtonOptions: {
+    disabled: submitting.value,
+    loading: submitting.value,
+  })),
+  resetButtonOptions: computed(() => ({
     content: $t('page.common.clear'),
-  },
+    disabled: submitting.value,
+  })),
   commonConfig: {
     componentProps: {
       class: 'w-full',

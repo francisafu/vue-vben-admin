@@ -26,14 +26,15 @@ const addressOptions = ref<Array<{ label: string; value: number; disabled?: bool
 const [AccountInfoForm, accountInfoFormApi] = useVbenForm({
   layout: 'vertical',
   handleSubmit,
-  submitButtonOptions: {
+  submitButtonOptions: computed(() => ({
     content: $t('page.common.save'),
-    disabled: false,
+    disabled: submitting.value,
     loading: submitting.value,
-  },
-  resetButtonOptions: {
+  })),
+  resetButtonOptions: computed(() => ({
     content: $t('page.common.clear'),
-  },
+    disabled: submitting.value,
+  })),
   commonConfig: {
     componentProps: {
       class: 'w-full',

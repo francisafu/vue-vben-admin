@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import type { ActivityApi, AccountInfoApi } from '#/api/core';
 
-import { onMounted, ref, computed } from 'vue';
+import { onMounted, ref, computed, h } from 'vue';
 
 import { Page, useVbenModal } from '@vben/common-ui';
 
 import { Card, message, Select, Table, Descriptions, Tag, Button, Popconfirm } from 'ant-design-vue';
 import type { ColumnsType } from 'ant-design-vue/es/table';
 
+import { Eye, EyeOff } from '@vben/icons';
 import { $t } from '#/locales';
 import { getUserActivitiesApi } from '#/api/core/activity';
 import { listAccountInfosApi, deleteAccountInfoApi } from '#/api/core/account-info';
@@ -29,6 +30,10 @@ const accountInfoData = ref<AccountInfoApi.AccountInfoListResult | null>(null);
 
 // 当前时间
 const currentTime = ref(dayjs().format('YYYY-MM-DD HH:mm:ss'));
+
+// 显示/隐藏状态
+const showAccount = ref(true);
+const showPassword = ref(true);
 
 // Modal配置
 const [Modal, modalApi] = useVbenModal({
@@ -86,6 +91,32 @@ function getActivityStatus(startTime: string, endTime: string) {
   }
 }
 
+// 切换账号显示状态
+function toggleAccountVisibility() {
+  showAccount.value = !showAccount.value;
+}
+
+// 切换密码显示状态
+function togglePasswordVisibility() {
+  showPassword.value = !showPassword.value;
+}
+
+// 格式化账号显示
+function formatAccount(account: string) {
+  if (showAccount.value) {
+    return account;
+  }
+  return '*'.repeat(account.length);
+}
+
+// 格式化密码显示
+function formatPassword(password: string) {
+  if (showPassword.value) {
+    return password;
+  }
+  return '*'.repeat(password.length);
+}
+
 // 表格列定义
 const columns: ColumnsType = [
   {
@@ -97,16 +128,44 @@ const columns: ColumnsType = [
     }
   },
   {
-    title: $t('page.accountInfo.account'),
-    dataIndex: 'account',
+    title: () => {
+      return h('div', { style: 'display: flex; align-items: center; justify-content: space-between;' }, [
+        h('span', $t('page.accountInfo.account')),
+        h(Button, {
+          type: 'text',
+          size: 'small',
+          onClick: toggleAccountVisibility,
+          style: 'padding: 0; min-width: auto; height: auto;'
+        }, {
+          icon: () => showAccount.value ? h(Eye) : h(EyeOff)
+        })
+      ]);
+    },
     key: 'account',
-    width: 120
+    width: 120,
+    customRender: ({ record }: { record: AccountInfoApi.AccountInfoItem }) => {
+      return formatAccount(record.account);
+    }
   },
   {
-    title: $t('page.accountInfo.password'),
-    dataIndex: 'password',
+    title: () => {
+      return h('div', { style: 'display: flex; align-items: center; justify-content: space-between;' }, [
+        h('span', $t('page.accountInfo.password')),
+        h(Button, {
+          type: 'text',
+          size: 'small',
+          onClick: togglePasswordVisibility,
+          style: 'padding: 0; min-width: auto; height: auto;'
+        }, {
+          icon: () => showPassword.value ? h(Eye) : h(EyeOff)
+        })
+      ]);
+    },
     key: 'password',
-    width: 120
+    width: 120,
+    customRender: ({ record }: { record: AccountInfoApi.AccountInfoItem }) => {
+      return formatPassword(record.password);
+    }
   },
   {
     title: $t('page.accountInfo.address'),

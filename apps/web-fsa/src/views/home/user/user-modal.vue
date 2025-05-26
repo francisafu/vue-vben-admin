@@ -129,14 +129,15 @@ const baseFields = [
 const [UserForm, userFormApi] = useVbenForm({
   layout: 'vertical',
   handleSubmit,
-  submitButtonOptions: {
+  submitButtonOptions: computed(() => ({
     content: $t('page.common.save'),
-    disabled: false,
+    disabled: submitting.value,
     loading: submitting.value,
-  },
-  resetButtonOptions: {
+  })),
+  resetButtonOptions: computed(() => ({
     content: $t('page.common.clear'),
-  },
+    disabled: submitting.value,
+  })),
   commonConfig: {
     componentProps: {
       class: 'w-full',
