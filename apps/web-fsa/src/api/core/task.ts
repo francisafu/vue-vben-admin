@@ -46,8 +46,9 @@ export namespace TaskApi {
     ordersDelay?: number;
     isScheduled?: boolean;
     startTime?: string;
+    isPolling?: boolean;
     products: ProductInfo[];
-    ordersLog: OrderLogInfo[];
+    ordersLog?: OrderLogInfo[];
   }
 
   /** 任务信息 */
@@ -79,6 +80,7 @@ export namespace TaskApi {
     ordersDelay?: number;
     isScheduled?: boolean;
     startTime?: string;
+    isPolling?: boolean;
     products?: ProductInfo[];
     ordersLog?: OrderLogInfo[];
   }

@@ -3,7 +3,7 @@ import type { ActivityApi, AccountInfoApi } from '#/api/core';
 
 import { onMounted, ref, computed, h } from 'vue';
 
-import { Page, useVbenModal } from '@vben/common-ui';
+import { Page, useVbenModal, useVbenDrawer } from '@vben/common-ui';
 
 import { Card, message, Select, Table, Descriptions, Tag, Button, Popconfirm } from 'ant-design-vue';
 import type { ColumnsType } from 'ant-design-vue/es/table';
@@ -15,6 +15,7 @@ import { listAccountInfosApi, deleteAccountInfoApi } from '#/api/core/account-in
 import dayjs from 'dayjs';
 
 import AccountInfoModal from './account-info-modal.vue';
+import AccountInfoTaskDrawer from './account-info-task-drawer.vue';
 
 // 用户活动数据
 const userActivities = ref<ActivityApi.UserActivityItem[]>([]);
@@ -48,6 +49,20 @@ const [Modal, modalApi] = useVbenModal({
       const data = modalApi.getData<Record<string, any>>();
       if (data && data.operationSuccess) {
         // 账号操作成功后，刷新账号列表
+        await fetchAccountInfoList();
+      }
+    }
+  }
+});
+
+// Drawer配置
+const [TaskDrawer, taskDrawerApi] = useVbenDrawer({
+  connectedComponent: AccountInfoTaskDrawer,
+  onOpenChange: async (isOpen: boolean) => {
+    if (!isOpen) {
+      const data = taskDrawerApi.getData<Record<string, any>>();
+      if (data && data.operationSuccess) {
+        // 任务操作成功后，刷新账号列表
         await fetchAccountInfoList();
       }
     }
@@ -244,15 +259,6 @@ const taskColumns: ColumnsType = [
     }
   },
   {
-    title: '订单间隔',
-    dataIndex: 'ordersDelay',
-    key: 'ordersDelay',
-    width: 100,
-    customRender: ({ text }: { text: number }) => {
-      return `${text}ms`;
-    }
-  },
-  {
     title: '是否定时',
     dataIndex: 'isScheduled',
     key: 'isScheduled',
@@ -268,6 +274,15 @@ const taskColumns: ColumnsType = [
     width: 170,
     customRender: ({ text }: { text: string | null }) => {
       return text ? dayjs(text).format('YYYY-MM-DD HH:mm:ss') : '-';
+    }
+  },
+  {
+    title: '订单间隔',
+    dataIndex: 'ordersDelay',
+    key: 'ordersDelay',
+    width: 100,
+    customRender: ({ text }: { text: number }) => {
+      return `${text}s`;
     }
   },
   {
@@ -398,9 +413,58 @@ function handleExpand(expanded: boolean, record: AccountInfoApi.AccountInfoItem)
   }
 }
 
-// 处理新建任务（暂时无功能）
+// 处理新建任务
 function handleCreateTask(accountId: number) {
-  message.info('新建任务功能即将开放，敬请期待！');
+  console.log('handleCreateTask called with accountId:', accountId);
+  console.log('selectedActivityId:', selectedActivityId.value);
+  
+  if (!selectedActivityId.value) {
+    message.warning('请先选择活动');
+    return;
+  }
+  
+  console.log('About to call taskDrawerApi methods with chain');
+  taskDrawerApi.setState({ 
+    title: '新建任务',
+    class: 'w-[800px]'
+  }).setData({
+    taskData: undefined,
+    isEdit: false,
+    accountId: accountId,
+    activityId: selectedActivityId.value,
+    activityStartTime: selectedActivity.value?.startTime
+  }).open();
+  console.log('taskDrawerApi chain call completed');
+}
+
+// 处理编辑任务
+function handleEditTask(taskRecord: AccountInfoApi.TaskInfo, accountId: number) {
+  taskDrawerApi.setState({ 
+    title: '编辑任务',
+    class: 'w-[800px]'
+  }).setData({
+    taskData: taskRecord,
+    isEdit: true,
+    accountId: accountId,
+    activityId: selectedActivityId.value,
+    activityStartTime: selectedActivity.value?.startTime
+  }).open();
+}
+
+// 处理删除任务
+async function handleDeleteTask(taskRecord: AccountInfoApi.TaskInfo) {
+  try {
+    // TODO: 调用删除任务的API
+    // await deleteTaskApi(taskRecord.id);
+    
+    // 模拟API调用
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    message.success('任务删除成功');
+    await fetchAccountInfoList();
+  } catch (error) {
+    message.error('任务删除失败');
+  }
 }
 
 // 更新当前时间
@@ -420,6 +484,7 @@ onMounted(async () => {
 <template>
   <Page>
     <Modal />
+    <TaskDrawer />
     <div class="p-4">
       <h1 class="mb-4 text-2xl font-bold">{{ $t('page.accountInfo.title') }}</h1>
 
@@ -523,7 +588,20 @@ onMounted(async () => {
                 >
                   <template #bodyCell="{ column, record: taskRecord }">
                     <template v-if="column.key === 'action'">
-                      <!-- 暂时留空，稍后添加任务操作按钮 -->
+                      <Button 
+                        type="link" 
+                        @click="() => handleEditTask(taskRecord as AccountInfoApi.TaskInfo, record.id)"
+                      >
+                        {{ $t('page.common.edit') }}
+                      </Button>
+                      <Popconfirm
+                        :title="$t('page.common.confirmDelete')"
+                        @confirm="() => handleDeleteTask(taskRecord as AccountInfoApi.TaskInfo)"
+                      >
+                        <Button type="link" danger>
+                          {{ $t('page.common.delete') }}
+                        </Button>
+                      </Popconfirm>
                     </template>
                   </template>
                 </Table>
