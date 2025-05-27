@@ -12,6 +12,7 @@ import { Eye, EyeOff } from '@vben/icons';
 import { $t } from '#/locales';
 import { getUserActivitiesApi } from '#/api/core/activity';
 import { listAccountInfosApi, deleteAccountInfoApi } from '#/api/core/account-info';
+import { deleteTaskApi, copyTaskApi } from '#/api/core/task';
 import dayjs from 'dayjs';
 
 import AccountInfoModal from './account-info-modal.vue';
@@ -59,11 +60,15 @@ const [Modal, modalApi] = useVbenModal({
 const [TaskDrawer, taskDrawerApi] = useVbenDrawer({
   connectedComponent: AccountInfoTaskDrawer,
   onOpenChange: async (isOpen: boolean) => {
+    console.log('TaskDrawer onOpenChange - isOpen:', isOpen);
     if (!isOpen) {
       const data = taskDrawerApi.getData<Record<string, any>>();
+      console.log('TaskDrawer onOpenChange - drawer data:', data);
       if (data && data.operationSuccess) {
+        console.log('TaskDrawer onOpenChange - refreshing account list...');
         // 任务操作成功后，刷新账号列表
         await fetchAccountInfoList();
+        console.log('TaskDrawer onOpenChange - account list refreshed');
       }
     }
   }
@@ -259,21 +264,12 @@ const taskColumns: ColumnsType = [
     }
   },
   {
-    title: '是否定时',
-    dataIndex: 'isScheduled',
-    key: 'isScheduled',
-    width: 100,
-    customRender: ({ text }: { text: boolean }) => {
-      return text ? '是' : '否';
-    }
-  },
-  {
     title: '启动时间',
     dataIndex: 'startTime',
     key: 'startTime',
     width: 170,
     customRender: ({ text }: { text: string | null }) => {
-      return text ? dayjs(text).format('YYYY-MM-DD HH:mm:ss') : '-';
+      return text ? dayjs(text).format('YYYY-MM-DD HH:mm:ss') : '立即';
     }
   },
   {
@@ -297,7 +293,7 @@ const taskColumns: ColumnsType = [
   {
     title: $t('page.common.action'),
     key: 'action',
-    width: 160,
+    width: 140,
     fixed: 'right'
   }
 ];
@@ -331,6 +327,7 @@ async function fetchAccountInfoList() {
 
   try {
     loading.value = true;
+    console.log('fetchAccountInfoList - Loading account list and tasks...');
     const result = await listAccountInfosApi({
       activityId: selectedActivityId.value
     });
@@ -342,10 +339,13 @@ async function fetchAccountInfoList() {
     result.accountInfos.forEach(accountInfo => {
       if (accountInfo.tasks && accountInfo.tasks.length > 0) {
         accountTasksMap.value[accountInfo.id] = accountInfo.tasks;
+        console.log(`fetchAccountInfoList - Account ${accountInfo.id} has ${accountInfo.tasks.length} tasks`);
       } else {
         accountTasksMap.value[accountInfo.id] = [];
+        console.log(`fetchAccountInfoList - Account ${accountInfo.id} has no tasks`);
       }
     });
+    console.log('fetchAccountInfoList - Task map updated:', accountTasksMap.value);
   } catch (error) {
     message.error($t('page.accountInfo.fetchAccountInfoError'));
     accountInfoList.value = [];
@@ -430,6 +430,7 @@ function handleCreateTask(accountId: number) {
   }).setData({
     taskData: undefined,
     isEdit: false,
+    isView: false,
     accountId: accountId,
     activityId: selectedActivityId.value,
     activityStartTime: selectedActivity.value?.startTime
@@ -437,32 +438,81 @@ function handleCreateTask(accountId: number) {
   console.log('taskDrawerApi chain call completed');
 }
 
-// 处理编辑任务
-function handleEditTask(taskRecord: AccountInfoApi.TaskInfo, accountId: number) {
+// 处理查看任务
+function handleViewTask(taskRecord: AccountInfoApi.TaskInfo, accountId: number) {
+  // 从最新的任务映射中获取任务数据，确保显示最新信息
+  const currentTasks = accountTasksMap.value[accountId] || [];
+  const latestTaskData = currentTasks.find(task => task.id === taskRecord.id) || taskRecord;
+  
+  console.log('handleViewTask - using latest task data:', latestTaskData);
+  
   taskDrawerApi.setState({ 
-    title: '编辑任务',
+    title: '查看任务',
     class: 'w-[800px]'
   }).setData({
-    taskData: taskRecord,
-    isEdit: true,
+    taskData: latestTaskData,
+    isEdit: false,
+    isView: true,
     accountId: accountId,
     activityId: selectedActivityId.value,
     activityStartTime: selectedActivity.value?.startTime
   }).open();
 }
 
+// 处理编辑任务
+function handleEditTask(taskRecord: AccountInfoApi.TaskInfo, accountId: number) {
+  // 从最新的任务映射中获取任务数据，确保编辑时使用最新信息
+  const currentTasks = accountTasksMap.value[accountId] || [];
+  const latestTaskData = currentTasks.find(task => task.id === taskRecord.id) || taskRecord;
+  
+  console.log('handleEditTask - using latest task data:', latestTaskData);
+  
+  taskDrawerApi.setState({ 
+    title: '编辑任务',
+    class: 'w-[800px]'
+  }).setData({
+    taskData: latestTaskData,
+    isEdit: true,
+    isView: false,
+    accountId: accountId,
+    activityId: selectedActivityId.value,
+    activityStartTime: selectedActivity.value?.startTime
+  }).open();
+}
+
+// 处理启动任务
+async function handleStartTask(taskRecord: AccountInfoApi.TaskInfo, accountId: number) {
+  try {
+    console.log('handleStartTask - starting task:', taskRecord.id, 'for account:', accountId);
+    // TODO: 这里后续需要调用启动任务的API
+    message.success('任务启动成功');
+  } catch (error) {
+    console.error('启动任务失败:', error);
+    message.error('任务启动失败');
+  }
+}
+
+// 处理复制任务
+async function handleCopyTask(taskRecord: AccountInfoApi.TaskInfo, accountId: number) {
+  try {
+    console.log('handleCopyTask - copying task:', taskRecord.id, 'for account:', accountId);
+    await copyTaskApi(taskRecord.id, { accountId: accountId });
+    message.success('任务复制成功');
+    await fetchAccountInfoList();
+  } catch (error) {
+    console.error('复制任务失败:', error);
+    message.error('任务复制失败');
+  }
+}
+
 // 处理删除任务
 async function handleDeleteTask(taskRecord: AccountInfoApi.TaskInfo) {
   try {
-    // TODO: 调用删除任务的API
-    // await deleteTaskApi(taskRecord.id);
-    
-    // 模拟API调用
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
+    await deleteTaskApi(taskRecord.id);
     message.success('任务删除成功');
     await fetchAccountInfoList();
   } catch (error) {
+    console.error('删除任务失败:', error);
     message.error('任务删除失败');
   }
 }
@@ -584,10 +634,28 @@ onMounted(async () => {
                   size="small"
                   rowKey="id"
                   bordered
-                  :scroll="{ x: 1000 }"
+                  :scroll="{ x: 980 }"
                 >
                   <template #bodyCell="{ column, record: taskRecord }">
                     <template v-if="column.key === 'action'">
+                      <Button 
+                        type="link" 
+                        @click="() => handleStartTask(taskRecord as AccountInfoApi.TaskInfo, record.id)"
+                      >
+                        启动
+                      </Button>
+                      <Button 
+                        type="link" 
+                        @click="() => handleViewTask(taskRecord as AccountInfoApi.TaskInfo, record.id)"
+                      >
+                        查看
+                      </Button>
+                      <Button 
+                        type="link" 
+                        @click="() => handleCopyTask(taskRecord as AccountInfoApi.TaskInfo, record.id)"
+                      >
+                        复制
+                      </Button>
                       <Button 
                         type="link" 
                         @click="() => handleEditTask(taskRecord as AccountInfoApi.TaskInfo, record.id)"

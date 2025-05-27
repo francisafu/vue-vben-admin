@@ -16,7 +16,6 @@ import {
   message,
   Card,
   Table,
-  Popconfirm,
   Upload
 } from 'ant-design-vue';
 import type { Dayjs } from 'dayjs';
@@ -36,6 +35,7 @@ const [Drawer, drawerApi] = useVbenDrawer({
       const data = drawerApi.getData<{
         taskData?: AccountInfoApi.TaskInfo;
         isEdit?: boolean;
+        isView?: boolean;
         accountId?: number;
         activityId?: number;
         activityStartTime?: string;
@@ -44,21 +44,22 @@ const [Drawer, drawerApi] = useVbenDrawer({
       
       if (data) {
         isEdit.value = data.isEdit || false;
+        isView.value = data.isView || false;
         taskData.value = data.taskData || undefined;
         accountId.value = data.accountId || null;
         activityId.value = data.activityId || null;
         activityStartTime.value = data.activityStartTime || null;
         
-        console.log('Data assigned - isEdit:', isEdit.value, 'accountId:', accountId.value, 'activityStartTime:', activityStartTime.value);
+        console.log('Data assigned - isEdit:', isEdit.value, 'isView:', isView.value, 'accountId:', accountId.value, 'activityStartTime:', activityStartTime.value);
         
-        // 如果是编辑模式，填充表单数据
-        if (isEdit.value && taskData.value) {
+        // 如果是编辑或查看模式，填充表单数据
+        if ((isEdit.value || isView.value) && taskData.value) {
           formData.ordersDelay = taskData.value.ordersDelay || 1;
           formData.isScheduled = taskData.value.isScheduled || false;
           formData.startTime = taskData.value.startTime ? dayjs(taskData.value.startTime) : undefined;
           formData.isPolling = taskData.value.isPolling || false;
           formData.products = taskData.value.products ? [...taskData.value.products] : [];
-          console.log('Edit mode - form data populated');
+          console.log(isView.value ? 'View mode - form data populated' : 'Edit mode - form data populated');
         } else {
           // 新建模式时重置表单
           resetForm();
@@ -77,9 +78,10 @@ const formData = reactive<{
   isPolling: boolean;
   products: Array<{
     id?: number;
-    productId: string;
-    targetCount: number;
+    skuCode: string;
+    quantity: number;
     productName?: string;
+    order?: number;
   }>;
 }>({
   ordersDelay: 1,
@@ -97,6 +99,8 @@ const submitting = ref(false);
 
 // 是否为编辑模式
 const isEdit = ref(false);
+// 是否为查看模式
+const isView = ref(false);
 const taskData = ref<AccountInfoApi.TaskInfo | undefined>(undefined);
 const accountId = ref<number | null>(null);
 const activityId = ref<number | null>(null);
@@ -115,21 +119,29 @@ const productColumns = [
     customRender: ({ index }: { index: number }) => index + 1
   },
   {
-    title: 'SKU编码',
-    dataIndex: 'productId',
-    key: 'productId',
-    width: 200
+    title: '编码',
+    dataIndex: 'skuCode',
+    key: 'skuCode',
+    width: 160
   },
   {
-    title: '购买数量',
-    dataIndex: 'targetCount',
-    key: 'targetCount',
-    width: 120
+    title: '品名',
+    dataIndex: 'productName',
+    key: 'productName',
+    width: 200,
+    ellipsis: true
   },
   {
-    title: $t('page.common.action'),
-    key: 'action',
+    title: '数量',
+    dataIndex: 'quantity',
+    key: 'quantity',
     width: 100
+  },
+  {
+    title: '组别',
+    key: 'order',
+    width: 80,
+    customRender: ({ record }: { record: any }) => record.order || '-'
   }
 ];
 
@@ -171,11 +183,11 @@ async function handleSubmit() {
     // 验证商品数据完整性
     for (let i = 0; i < formData.products.length; i++) {
       const product = formData.products[i];
-      if (!product?.productId || !product.productId.trim()) {
-        message.warning(`请填写第${i + 1}个商品的商品ID`);
+      if (!product?.skuCode || !product.skuCode.trim()) {
+        message.warning(`请填写第${i + 1}个商品的商品编码`);
         return;
       }
-      if (!product?.targetCount || product.targetCount <= 0) {
+      if (!product?.quantity || product.quantity <= 0) {
         message.warning(`请填写第${i + 1}个商品的购买数量`);
         return;
       }
@@ -191,13 +203,15 @@ async function handleSubmit() {
         startTime: formData.isScheduled && formData.startTime ? formData.startTime.format('YYYY-MM-DD HH:mm:ss') : undefined,
         isPolling: formData.isPolling,
         products: formData.products.map((p, index) => ({
-          skuCode: p.productId.trim(),
+          skuCode: p.skuCode.trim(),
           productName: p.productName || '', // 使用保存的商品名称
-          quantity: p.targetCount,
-          order: index + 1
+          quantity: p.quantity,
+          order: p.order || (index + 1) // 使用原始order值，如果没有则使用index+1
         }))
       };
       
+      console.log('Edit mode - submitting update data:', updateData);
+      console.log('Edit mode - current formData.products:', formData.products);
       await updateTaskApi(taskData.value.id, updateData);
       message.success('任务更新成功');
     } else {
@@ -210,10 +224,10 @@ async function handleSubmit() {
         startTime: formData.isScheduled && formData.startTime ? formData.startTime.format('YYYY-MM-DD HH:mm:ss') : undefined,
         isPolling: formData.isPolling,
         products: formData.products.map((p, index) => ({
-          skuCode: p.productId.trim(),
+          skuCode: p.skuCode.trim(),
           productName: p.productName || '', // 使用保存的商品名称
-          quantity: p.targetCount,
-          order: index + 1
+          quantity: p.quantity,
+          order: p.order || (index + 1) // 使用原始order值，如果没有则使用index+1
         }))
       };
       
@@ -222,6 +236,7 @@ async function handleSubmit() {
     }
     
     // 通知父组件刷新数据
+    console.log('Task operation successful, setting operationSuccess flag and closing drawer');
     drawerApi.setData({ operationSuccess: true });
     drawerApi.close();
     
@@ -244,6 +259,9 @@ const submitButtonOptions = computed(() => ({
 const cancelButtonOptions = computed(() => ({
   disabled: submitting.value
 }));
+
+// 是否禁用所有表单控件（查看模式时禁用）
+const isFormDisabled = computed(() => isView.value);
 
 // 取消操作
 function handleCancel() {
@@ -287,11 +305,12 @@ async function handleUpload(info: any) {
     
     // 处理API返回的解析后的商品数据
     if (file.response && file.response.products) {
-      // 将API返回的ProductInfo[]转换为表单需要的格式
+      // 直接使用API返回的ProductInfo[]格式
       formData.products = file.response.products.map((product: any) => ({
-        productId: product.skuCode, // 使用skuCode作为productId
-        targetCount: product.quantity, // 使用quantity作为targetCount
-        productName: product.productName // 使用productName作为productName
+        skuCode: product.skuCode,
+        quantity: product.quantity,
+        productName: product.productName,
+        order: product.order
       }));
       console.log('Products converted from API:', formData.products);
       message.success(`成功解析 ${formData.products.length} 个商品`);
@@ -319,10 +338,7 @@ async function customRequest(options: any) {
   }
 }
 
-// 移除单个商品
-function removeProduct(index: number) {
-  formData.products.splice(index, 1);
-}
+
 
 // 处理定时启动切换
 function handleScheduledChange(checked: boolean | string | number) {
@@ -342,7 +358,7 @@ function handleScheduledChange(checked: boolean | string | number) {
 </script>
 
 <template>
-  <Drawer :title="isEdit ? '编辑任务' : '新建任务'">
+  <Drawer :title="isView ? '查看任务' : (isEdit ? '编辑任务' : '新建任务')">
     <div class="p-6">
       <Form
         ref="formRef"
@@ -355,11 +371,11 @@ function handleScheduledChange(checked: boolean | string | number) {
           <!-- 第一行：是否定时启动 和 是否轮询 -->
           <div class="grid grid-cols-2 gap-6 mb-4">
             <FormItem label="是否定时启动" name="isScheduled">
-              <Switch v-model:checked="formData.isScheduled" @change="handleScheduledChange" />
+              <Switch v-model:checked="formData.isScheduled" @change="handleScheduledChange" :disabled="isFormDisabled" />
             </FormItem>
             
             <FormItem label="是否轮询" name="isPolling">
-              <Switch v-model:checked="formData.isPolling" />
+              <Switch v-model:checked="formData.isPolling" :disabled="isFormDisabled" />
               <div class="mt-1 text-xs text-gray-500">
                 开启后将持续轮询检查商品状态
               </div>
@@ -380,6 +396,7 @@ function handleScheduledChange(checked: boolean | string | number) {
                 :show-time="{ format: 'HH:mm:ss' }"
                 placeholder="请选择启动时间"
                 style="width: 280px"
+                :disabled="isFormDisabled"
               />
             </FormItem>
             <div v-else></div>
@@ -392,6 +409,7 @@ function handleScheduledChange(checked: boolean | string | number) {
                 :step="1"
                 style="width: 200px"
                 placeholder="请输入订单间隔时间"
+                :disabled="isFormDisabled"
               />
               <div class="mt-1 text-xs text-gray-500">
                 建议设置1秒以上，避免请求过于频繁
@@ -402,7 +420,7 @@ function handleScheduledChange(checked: boolean | string | number) {
 
         <!-- 商品设置 -->
         <Card title="商品设置" class="mb-4">
-          <div class="mb-4">
+          <div v-if="!isFormDisabled" class="mb-4">
             <Upload
               :fileList="fileList"
               :before-upload="beforeUpload"
@@ -410,6 +428,7 @@ function handleScheduledChange(checked: boolean | string | number) {
               @change="handleUpload"
               accept=".xlsx"
               :multiple="false"
+              :max-count="1"
             >
               <Button type="dashed" :loading="uploading" style="width: 100%">
                 <template v-if="uploading">
@@ -432,24 +451,11 @@ function handleScheduledChange(checked: boolean | string | number) {
             :pagination="false"
             size="small"
             bordered
-            rowKey="productId"
-          >
-            <template #bodyCell="{ column, record, index }">
-              <template v-if="column.key === 'action'">
-                <Popconfirm
-                  title="确定删除这个商品吗？"
-                  @confirm="() => removeProduct(index)"
-                >
-                  <Button type="link" danger size="small">
-                    删除
-                  </Button>
-                </Popconfirm>
-              </template>
-            </template>
-          </Table>
+            rowKey="skuCode"
+          />
           
           <div v-else class="text-center text-gray-500 py-8">
-            暂无商品，请点击上方按钮上传Excel文件
+            {{ isFormDisabled ? '暂无商品数据' : '暂无商品，请点击上方按钮上传Excel文件' }}
           </div>
         </Card>
       </Form>
@@ -459,9 +465,9 @@ function handleScheduledChange(checked: boolean | string | number) {
     <template #footer>
       <div class="flex justify-end gap-3">
         <Button v-bind="cancelButtonOptions" @click="handleCancel">
-          {{ $t('page.common.cancel') }}
+          {{ isFormDisabled ? '关闭' : $t('page.common.cancel') }}
         </Button>
-        <Button v-bind="submitButtonOptions" @click="handleSubmit">
+        <Button v-if="!isFormDisabled" v-bind="submitButtonOptions" @click="handleSubmit">
           {{ isEdit ? $t('page.common.update') : $t('page.common.save') }}
         </Button>
       </div>
