@@ -120,7 +120,7 @@ async function fetchUserAddresses() {
     const userId = (userInfo as any).id;
     
     if (!userId || typeof userId !== 'number') {
-      throw new Error('无效的用户ID');
+      throw new Error($t('page.accountInfo.invalidUserId'));
     }
     
     // 获取用户地址列表
@@ -135,14 +135,13 @@ async function fetchUserAddresses() {
     // 如果没有地址，显示提示
     if (addresses.length === 0) {
       addressOptions.value = [
-        { label: '请先在个人中心添加地址', value: 0, disabled: true }
+        { label: $t('page.accountInfo.addAddressInProfile'), value: 0, disabled: true }
       ];
     }
   } catch (error) {
-    console.error('获取用户地址失败:', error);
-    message.error('获取用户地址失败');
+    message.error($t('page.accountInfo.fetchUserAddressError'));
     addressOptions.value = [
-      { label: '获取地址失败，请重试', value: 0, disabled: true }
+      { label: $t('page.accountInfo.fetchAddressRetry'), value: 0, disabled: true }
     ];
   } finally {
     loading.value = false;
@@ -155,7 +154,7 @@ async function handleSubmit(values: any) {
     submitting.value = true;
 
     if (!activityId.value) {
-      message.error('活动ID不能为空');
+      message.error($t('page.accountInfo.activityIdRequired'));
       return;
     }
 

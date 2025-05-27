@@ -30,7 +30,6 @@ const [Drawer, drawerApi] = useVbenDrawer({
     drawerApi.close();
   },
   onOpenChange(isOpen: boolean) {
-    console.log('TaskDrawer onOpenChange:', isOpen);
     if (isOpen) {
       const data = drawerApi.getData<{
         taskData?: AccountInfoApi.TaskInfo;
@@ -40,7 +39,6 @@ const [Drawer, drawerApi] = useVbenDrawer({
         activityId?: number;
         activityStartTime?: string;
       }>();
-      console.log('TaskDrawer getData result:', data);
       
       if (data) {
         isEdit.value = data.isEdit || false;
@@ -50,8 +48,6 @@ const [Drawer, drawerApi] = useVbenDrawer({
         activityId.value = data.activityId || null;
         activityStartTime.value = data.activityStartTime || null;
         
-        console.log('Data assigned - isEdit:', isEdit.value, 'isView:', isView.value, 'accountId:', accountId.value, 'activityStartTime:', activityStartTime.value);
-        
         // 如果是编辑或查看模式，填充表单数据
         if ((isEdit.value || isView.value) && taskData.value) {
           formData.ordersDelay = taskData.value.ordersDelay || 1;
@@ -59,11 +55,9 @@ const [Drawer, drawerApi] = useVbenDrawer({
           formData.startTime = taskData.value.startTime ? dayjs(taskData.value.startTime) : undefined;
           formData.isPolling = taskData.value.isPolling || false;
           formData.products = taskData.value.products ? [...taskData.value.products] : [];
-          console.log(isView.value ? 'View mode - form data populated' : 'Edit mode - form data populated');
         } else {
           // 新建模式时重置表单
           resetForm();
-          console.log('Create mode - form reset');
         }
       }
     }
@@ -119,26 +113,26 @@ const productColumns = [
     customRender: ({ index }: { index: number }) => index + 1
   },
   {
-    title: '编码',
+    title: $t('page.task.productCode'),
     dataIndex: 'skuCode',
     key: 'skuCode',
     width: 160
   },
   {
-    title: '品名',
+    title: $t('page.task.productName'),
     dataIndex: 'productName',
     key: 'productName',
     width: 200,
     ellipsis: true
   },
   {
-    title: '数量',
+    title: $t('page.task.quantity'),
     dataIndex: 'quantity',
     key: 'quantity',
     width: 100
   },
   {
-    title: '组别',
+    title: $t('page.task.order'),
     key: 'order',
     width: 80,
     customRender: ({ record }: { record: any }) => record.order || '-'
@@ -148,7 +142,7 @@ const productColumns = [
 // 表单验证规则
 const rules = {
   ordersDelay: [
-    { required: true, message: '请输入订单间隔时间' }
+    { required: true, message: $t('page.task.ordersDelayRequired') }
   ]
 };
 
@@ -176,7 +170,7 @@ async function handleSubmit() {
     
     // 验证商品列表
     if (formData.products.length === 0) {
-      message.warning('请至少添加一个商品');
+      message.warning($t('page.task.productRequired'));
       return;
     }
     
@@ -184,11 +178,11 @@ async function handleSubmit() {
     for (let i = 0; i < formData.products.length; i++) {
       const product = formData.products[i];
       if (!product?.skuCode || !product.skuCode.trim()) {
-        message.warning(`请填写第${i + 1}个商品的商品编码`);
+        message.warning($t('page.task.productCodeRequired', { index: i + 1 }));
         return;
       }
       if (!product?.quantity || product.quantity <= 0) {
-        message.warning(`请填写第${i + 1}个商品的购买数量`);
+        message.warning($t('page.task.productQuantityRequired', { index: i + 1 }));
         return;
       }
     }
@@ -210,10 +204,8 @@ async function handleSubmit() {
         }))
       };
       
-      console.log('Edit mode - submitting update data:', updateData);
-      console.log('Edit mode - current formData.products:', formData.products);
       await updateTaskApi(taskData.value.id, updateData);
-      message.success('任务更新成功');
+      message.success($t('page.task.updateSuccess'));
     } else {
       // 新建模式 - 构建创建数据
       const createData = {
@@ -232,17 +224,15 @@ async function handleSubmit() {
       };
       
       await createTaskApi(createData);
-      message.success('任务创建成功');
+      message.success($t('page.task.createSuccess'));
     }
     
     // 通知父组件刷新数据
-    console.log('Task operation successful, setting operationSuccess flag and closing drawer');
     drawerApi.setData({ operationSuccess: true });
     drawerApi.close();
     
   } catch (error) {
-    console.error('提交任务失败:', error);
-    message.error(isEdit.value ? '任务更新失败' : '任务创建失败');
+    message.error(isEdit.value ? $t('page.task.updateError') : $t('page.task.createError'));
   } finally {
     submitting.value = false;
   }
@@ -270,19 +260,19 @@ function handleCancel() {
 
 // 组件挂载时的初始化
 onMounted(() => {
-  console.log('TaskDrawer onMounted');
+  // 组件初始化
 });
 
 // 处理文件上传前的验证
 function beforeUpload(file: File) {
   const isExcel = file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
   if (!isExcel) {
-    message.error('只能上传 Excel(.xlsx) 文件！');
+    message.error($t('page.task.excelFormatError'));
     return false;
   }
   const isLt10M = file.size / 1024 / 1024 < 10;
   if (!isLt10M) {
-    message.error('文件大小不能超过 10MB！');
+    message.error($t('page.task.fileSizeError'));
     return false;
   }
   return true;
@@ -301,7 +291,7 @@ async function handleUpload(info: any) {
   
   if (file.status === 'done') {
     uploading.value = false;
-    message.success(`${file.name} 文件上传成功`);
+    message.success(`${file.name} ${$t('page.task.uploadSuccess')}`);
     
     // 处理API返回的解析后的商品数据
     if (file.response && file.response.products) {
@@ -312,12 +302,11 @@ async function handleUpload(info: any) {
         productName: product.productName,
         order: product.order
       }));
-      console.log('Products converted from API:', formData.products);
-      message.success(`成功解析 ${formData.products.length} 个商品`);
+      message.success($t('page.task.parseSuccess', { count: formData.products.length }));
     }
   } else if (file.status === 'error') {
     uploading.value = false;
-    message.error(`${file.name} 文件上传失败`);
+    message.error(`${file.name} ${$t('page.task.uploadError')}`);
   }
 }
 
@@ -331,9 +320,7 @@ async function customRequest(options: any) {
     
     // API调用成功
     onSuccess(result);
-    console.log('Products parsed from API:', result);
   } catch (error) {
-    console.error('上传解析失败:', error);
     onError(error);
   }
 }
@@ -348,17 +335,15 @@ function handleScheduledChange(checked: boolean | string | number) {
   // 如果开启定时启动且有活动开始时间，设置为活动开始时间
   if (isChecked && activityStartTime.value) {
     formData.startTime = dayjs(activityStartTime.value);
-    console.log('Set start time to activity start time:', activityStartTime.value);
   } else if (!isChecked) {
     // 如果关闭定时启动，清空时间
     formData.startTime = undefined;
-    console.log('Cleared start time because scheduled is disabled');
   }
 }
 </script>
 
 <template>
-  <Drawer :title="isView ? '查看任务' : (isEdit ? '编辑任务' : '新建任务')">
+  <Drawer :title="isView ? $t('page.task.viewTask') : (isEdit ? $t('page.task.editTask') : $t('page.task.createTask'))">
     <div class="p-6">
       <Form
         ref="formRef"
@@ -367,17 +352,17 @@ function handleScheduledChange(checked: boolean | string | number) {
         layout="vertical"
       >
         <!-- 基础设置 -->
-        <Card title="基础设置" class="mb-4">
+        <Card :title="$t('page.task.basicSettings')" class="mb-4">
           <!-- 第一行：是否定时启动 和 是否轮询 -->
           <div class="grid grid-cols-2 gap-6 mb-4">
-            <FormItem label="是否定时启动" name="isScheduled">
+            <FormItem :label="$t('page.task.isScheduled')" name="isScheduled">
               <Switch v-model:checked="formData.isScheduled" @change="handleScheduledChange" :disabled="isFormDisabled" />
             </FormItem>
             
-            <FormItem label="是否轮询" name="isPolling">
+            <FormItem :label="$t('page.task.isPolling')" name="isPolling">
               <Switch v-model:checked="formData.isPolling" :disabled="isFormDisabled" />
               <div class="mt-1 text-xs text-gray-500">
-                开启后将持续轮询检查商品状态
+                {{ $t('page.task.pollingDescription') }}
               </div>
             </FormItem>
           </div>
@@ -386,7 +371,7 @@ function handleScheduledChange(checked: boolean | string | number) {
           <div class="grid grid-cols-2 gap-6">
             <FormItem 
               v-if="formData.isScheduled" 
-              label="启动时间" 
+              :label="$t('page.task.startTime')" 
               name="startTime"
             >
               <DatePicker
@@ -394,32 +379,32 @@ function handleScheduledChange(checked: boolean | string | number) {
                 format="YYYY-MM-DD HH:mm:ss"
                 :disabled-date="disabledStartTime"
                 :show-time="{ format: 'HH:mm:ss' }"
-                placeholder="请选择启动时间"
+                :placeholder="$t('page.task.startTimePlaceholder')"
                 style="width: 280px"
                 :disabled="isFormDisabled"
               />
             </FormItem>
             <div v-else></div>
             
-            <FormItem label="订单间隔(秒)" name="ordersDelay">
+            <FormItem :label="$t('page.task.ordersDelay')" name="ordersDelay">
               <InputNumber
                 v-model:value="formData.ordersDelay"
                 :min="1"
                 :max="60000"
                 :step="1"
                 style="width: 200px"
-                placeholder="请输入订单间隔时间"
+                :placeholder="$t('page.task.ordersDelayPlaceholder')"
                 :disabled="isFormDisabled"
               />
               <div class="mt-1 text-xs text-gray-500">
-                建议设置1秒以上，避免请求过于频繁
+                {{ $t('page.task.ordersDelayDescription') }}
               </div>
             </FormItem>
           </div>
         </Card>
 
         <!-- 商品设置 -->
-        <Card title="商品设置" class="mb-4">
+        <Card :title="$t('page.task.productSettings')" class="mb-4">
           <div v-if="!isFormDisabled" class="mb-4">
             <Upload
               :fileList="fileList"
@@ -432,15 +417,15 @@ function handleScheduledChange(checked: boolean | string | number) {
             >
               <Button type="dashed" :loading="uploading" style="width: 100%">
                 <template v-if="uploading">
-                  上传中...
+                  {{ $t('page.task.uploading') }}
                 </template>
                 <template v-else>
-                  + 上传Excel文件
+                  {{ $t('page.task.uploadExcel') }}
                 </template>
               </Button>
             </Upload>
             <div class="mt-2 text-xs text-gray-500">
-              仅支持.xlsx格式，文件大小不超过10MB
+              {{ $t('page.task.fileFormat') }}
             </div>
           </div>
           
@@ -455,7 +440,7 @@ function handleScheduledChange(checked: boolean | string | number) {
           />
           
           <div v-else class="text-center text-gray-500 py-8">
-            {{ isFormDisabled ? '暂无商品数据' : '暂无商品，请点击上方按钮上传Excel文件' }}
+            {{ isFormDisabled ? $t('page.task.noProductData') : $t('page.task.uploadExcelPrompt') }}
           </div>
         </Card>
       </Form>
@@ -465,7 +450,7 @@ function handleScheduledChange(checked: boolean | string | number) {
     <template #footer>
       <div class="flex justify-end gap-3">
         <Button v-bind="cancelButtonOptions" @click="handleCancel">
-          {{ isFormDisabled ? '关闭' : $t('page.common.cancel') }}
+          {{ isFormDisabled ? $t('page.common.close') : $t('page.common.cancel') }}
         </Button>
         <Button v-if="!isFormDisabled" v-bind="submitButtonOptions" @click="handleSubmit">
           {{ isEdit ? $t('page.common.update') : $t('page.common.save') }}

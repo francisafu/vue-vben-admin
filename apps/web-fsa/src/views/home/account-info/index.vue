@@ -5,7 +5,7 @@ import { onMounted, ref, computed, h } from 'vue';
 
 import { Page, useVbenModal, useVbenDrawer } from '@vben/common-ui';
 
-import { Card, message, Select, Table, Descriptions, Tag, Button, Popconfirm } from 'ant-design-vue';
+import { Card, message, Select, Table, Descriptions, Tag, Button, Popconfirm, Tooltip } from 'ant-design-vue';
 import type { ColumnsType } from 'ant-design-vue/es/table';
 
 import { Eye, EyeOff } from '@vben/icons';
@@ -60,15 +60,11 @@ const [Modal, modalApi] = useVbenModal({
 const [TaskDrawer, taskDrawerApi] = useVbenDrawer({
   connectedComponent: AccountInfoTaskDrawer,
   onOpenChange: async (isOpen: boolean) => {
-    console.log('TaskDrawer onOpenChange - isOpen:', isOpen);
     if (!isOpen) {
       const data = taskDrawerApi.getData<Record<string, any>>();
-      console.log('TaskDrawer onOpenChange - drawer data:', data);
       if (data && data.operationSuccess) {
-        console.log('TaskDrawer onOpenChange - refreshing account list...');
         // 任务操作成功后，刷新账号列表
         await fetchAccountInfoList();
-        console.log('TaskDrawer onOpenChange - account list refreshed');
       }
     }
   }
@@ -256,7 +252,7 @@ const taskColumns: ColumnsType = [
     }
   },
   {
-    title: '商品数量',
+    title: $t('page.task.productCount'),
     key: 'productCount',
     width: 100,
     customRender: ({ record }: { record: AccountInfoApi.TaskInfo }) => {
@@ -264,16 +260,16 @@ const taskColumns: ColumnsType = [
     }
   },
   {
-    title: '启动时间',
+    title: $t('page.task.startTime'),
     dataIndex: 'startTime',
     key: 'startTime',
     width: 170,
     customRender: ({ text }: { text: string | null }) => {
-      return text ? dayjs(text).format('YYYY-MM-DD HH:mm:ss') : '立即';
+      return text ? dayjs(text).format('YYYY-MM-DD HH:mm:ss') : $t('page.accountInfo.immediate');
     }
   },
   {
-    title: '订单间隔',
+    title: $t('page.task.ordersDelay'),
     dataIndex: 'ordersDelay',
     key: 'ordersDelay',
     width: 100,
@@ -282,12 +278,12 @@ const taskColumns: ColumnsType = [
     }
   },
   {
-    title: '是否轮询',
+    title: $t('page.task.isPolling'),
     dataIndex: 'isPolling',
     key: 'isPolling',
     width: 100,
     customRender: ({ text }: { text: boolean }) => {
-      return text ? '是' : '否';
+      return text ? $t('page.common.yes') : $t('page.common.no');
     }
   },
   {
@@ -327,7 +323,6 @@ async function fetchAccountInfoList() {
 
   try {
     loading.value = true;
-    console.log('fetchAccountInfoList - Loading account list and tasks...');
     const result = await listAccountInfosApi({
       activityId: selectedActivityId.value
     });
@@ -339,13 +334,10 @@ async function fetchAccountInfoList() {
     result.accountInfos.forEach(accountInfo => {
       if (accountInfo.tasks && accountInfo.tasks.length > 0) {
         accountTasksMap.value[accountInfo.id] = accountInfo.tasks;
-        console.log(`fetchAccountInfoList - Account ${accountInfo.id} has ${accountInfo.tasks.length} tasks`);
       } else {
         accountTasksMap.value[accountInfo.id] = [];
-        console.log(`fetchAccountInfoList - Account ${accountInfo.id} has no tasks`);
       }
     });
-    console.log('fetchAccountInfoList - Task map updated:', accountTasksMap.value);
   } catch (error) {
     message.error($t('page.accountInfo.fetchAccountInfoError'));
     accountInfoList.value = [];
@@ -415,17 +407,13 @@ function handleExpand(expanded: boolean, record: AccountInfoApi.AccountInfoItem)
 
 // 处理新建任务
 function handleCreateTask(accountId: number) {
-  console.log('handleCreateTask called with accountId:', accountId);
-  console.log('selectedActivityId:', selectedActivityId.value);
-  
   if (!selectedActivityId.value) {
-    message.warning('请先选择活动');
+    message.warning($t('page.accountInfo.pleaseSelectActivityFirst'));
     return;
   }
   
-  console.log('About to call taskDrawerApi methods with chain');
   taskDrawerApi.setState({ 
-    title: '新建任务',
+    title: $t('page.task.createTask'),
     class: 'w-[800px]'
   }).setData({
     taskData: undefined,
@@ -435,7 +423,6 @@ function handleCreateTask(accountId: number) {
     activityId: selectedActivityId.value,
     activityStartTime: selectedActivity.value?.startTime
   }).open();
-  console.log('taskDrawerApi chain call completed');
 }
 
 // 处理查看任务
@@ -444,10 +431,8 @@ function handleViewTask(taskRecord: AccountInfoApi.TaskInfo, accountId: number) 
   const currentTasks = accountTasksMap.value[accountId] || [];
   const latestTaskData = currentTasks.find(task => task.id === taskRecord.id) || taskRecord;
   
-  console.log('handleViewTask - using latest task data:', latestTaskData);
-  
   taskDrawerApi.setState({ 
-    title: '查看任务',
+    title: $t('page.task.viewTask'),
     class: 'w-[800px]'
   }).setData({
     taskData: latestTaskData,
@@ -465,10 +450,8 @@ function handleEditTask(taskRecord: AccountInfoApi.TaskInfo, accountId: number) 
   const currentTasks = accountTasksMap.value[accountId] || [];
   const latestTaskData = currentTasks.find(task => task.id === taskRecord.id) || taskRecord;
   
-  console.log('handleEditTask - using latest task data:', latestTaskData);
-  
   taskDrawerApi.setState({ 
-    title: '编辑任务',
+    title: $t('page.task.editTask'),
     class: 'w-[800px]'
   }).setData({
     taskData: latestTaskData,
@@ -483,25 +466,21 @@ function handleEditTask(taskRecord: AccountInfoApi.TaskInfo, accountId: number) 
 // 处理启动任务
 async function handleStartTask(taskRecord: AccountInfoApi.TaskInfo, accountId: number) {
   try {
-    console.log('handleStartTask - starting task:', taskRecord.id, 'for account:', accountId);
     // TODO: 这里后续需要调用启动任务的API
-    message.success('任务启动成功');
+    message.success($t('page.accountInfo.taskStartSuccess'));
   } catch (error) {
-    console.error('启动任务失败:', error);
-    message.error('任务启动失败');
+    message.error($t('page.accountInfo.taskStartError'));
   }
 }
 
 // 处理复制任务
 async function handleCopyTask(taskRecord: AccountInfoApi.TaskInfo, accountId: number) {
   try {
-    console.log('handleCopyTask - copying task:', taskRecord.id, 'for account:', accountId);
     await copyTaskApi(taskRecord.id, { accountId: accountId });
-    message.success('任务复制成功');
+    message.success($t('page.accountInfo.taskCopySuccess'));
     await fetchAccountInfoList();
   } catch (error) {
-    console.error('复制任务失败:', error);
-    message.error('任务复制失败');
+    message.error($t('page.accountInfo.taskCopyError'));
   }
 }
 
@@ -509,11 +488,10 @@ async function handleCopyTask(taskRecord: AccountInfoApi.TaskInfo, accountId: nu
 async function handleDeleteTask(taskRecord: AccountInfoApi.TaskInfo) {
   try {
     await deleteTaskApi(taskRecord.id);
-    message.success('任务删除成功');
+    message.success($t('page.accountInfo.taskDeleteSuccess'));
     await fetchAccountInfoList();
   } catch (error) {
-    console.error('删除任务失败:', error);
-    message.error('任务删除失败');
+    message.error($t('page.accountInfo.taskDeleteError'));
   }
 }
 
@@ -607,21 +585,21 @@ onMounted(async () => {
           >
             <!-- 展开图标列添加标题 -->
             <template #expandColumnTitle>
-              <span>任务列表</span>
+              <span>{{ $t('page.accountInfo.taskList') }}</span>
             </template>
             
             <!-- 展开行插槽 -->
             <template #expandedRowRender="{ record }">
               <div class="px-4">
                 <div class="flex justify-between items-center mb-2">
-                  <div class="font-medium">账号 {{ formatAccount(record.account) }} 的任务列表</div>
+                  <div class="font-medium">{{ $t('page.accountInfo.accountTaskList', { account: formatAccount(record.account) }) }}</div>
                   <div>
                     <Button 
                       type="primary" 
                       size="small" 
                       @click="() => handleCreateTask(record.id)"
                     >
-                      新建任务
+                      {{ $t('page.accountInfo.createTask') }}
                     </Button>
                   </div>
                 </div>
@@ -634,48 +612,88 @@ onMounted(async () => {
                   size="small"
                   rowKey="id"
                   bordered
-                  :scroll="{ x: 980 }"
+                  :scroll="{ x: 1000 }"
                 >
                   <template #bodyCell="{ column, record: taskRecord }">
                     <template v-if="column.key === 'action'">
-                      <Button 
-                        type="link" 
-                        @click="() => handleStartTask(taskRecord as AccountInfoApi.TaskInfo, record.id)"
-                      >
-                        启动
-                      </Button>
-                      <Button 
-                        type="link" 
-                        @click="() => handleViewTask(taskRecord as AccountInfoApi.TaskInfo, record.id)"
-                      >
-                        查看
-                      </Button>
-                      <Button 
-                        type="link" 
-                        @click="() => handleCopyTask(taskRecord as AccountInfoApi.TaskInfo, record.id)"
-                      >
-                        复制
-                      </Button>
-                      <Button 
-                        type="link" 
-                        @click="() => handleEditTask(taskRecord as AccountInfoApi.TaskInfo, record.id)"
-                      >
-                        {{ $t('page.common.edit') }}
-                      </Button>
+                      <Tooltip :title="$t('page.accountInfo.startTask')">
+                        <Button 
+                          type="text" 
+                          size="small"
+                          class="mr-2"
+                          @click="() => handleStartTask(taskRecord as AccountInfoApi.TaskInfo, record.id)"
+                          style="color: #52c41a;"
+                        >
+                          <template #icon>
+                            <span class="icon-[mdi--play] size-4"></span>
+                          </template>
+                        </Button>
+                      </Tooltip>
+                      
+                      <Tooltip :title="$t('page.accountInfo.viewTask')">
+                        <Button 
+                          type="text" 
+                          size="small"
+                          class="mr-2"
+                          @click="() => handleViewTask(taskRecord as AccountInfoApi.TaskInfo, record.id)"
+                          style="color: #722ed1;"
+                        >
+                          <template #icon>
+                            <span class="icon-[mdi--file-document-outline] size-4"></span>
+                          </template>
+                        </Button>
+                      </Tooltip>
+                      
+                      <Tooltip :title="$t('page.accountInfo.copyTask')">
+                        <Button 
+                          type="text" 
+                          size="small"
+                          class="mr-2"
+                          @click="() => handleCopyTask(taskRecord as AccountInfoApi.TaskInfo, record.id)"
+                          style="color: #fa8c16;"
+                        >
+                          <template #icon>
+                            <span class="icon-[mdi--content-copy] size-4"></span>
+                          </template>
+                        </Button>
+                      </Tooltip>
+                      
+                      <Tooltip :title="$t('page.accountInfo.editTask')">
+                        <Button 
+                          type="text" 
+                          size="small"
+                          class="mr-2"
+                          @click="() => handleEditTask(taskRecord as AccountInfoApi.TaskInfo, record.id)"
+                          style="color: #1890ff;"
+                        >
+                          <template #icon>
+                            <span class="icon-[mdi--pencil] size-4"></span>
+                          </template>
+                        </Button>
+                      </Tooltip>
+                      
                       <Popconfirm
                         :title="$t('page.common.confirmDelete')"
                         @confirm="() => handleDeleteTask(taskRecord as AccountInfoApi.TaskInfo)"
                       >
-                        <Button type="link" danger>
-                          {{ $t('page.common.delete') }}
-                        </Button>
+                        <Tooltip :title="$t('page.accountInfo.deleteTask')">
+                          <Button 
+                            type="text" 
+                            size="small"
+                            style="color: #ff4d4f;"
+                          >
+                            <template #icon>
+                              <span class="icon-[mdi--delete] size-4"></span>
+                            </template>
+                          </Button>
+                        </Tooltip>
                       </Popconfirm>
                     </template>
                   </template>
                 </Table>
                 
                 <div v-if="accountTasksMap[record.id]?.length === 0" class="py-4 text-center text-gray-500">
-                  该账号暂无任务
+                  {{ $t('page.accountInfo.noTaskData') }}
                 </div>
               </div>
             </template>
