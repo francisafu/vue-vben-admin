@@ -103,11 +103,17 @@
     "pleaseSelectActivityFirst": "请先选择活动",
     "taskStartSuccess": "任务启动成功",
     "taskStartError": "任务启动失败",
+    "taskCancelSuccess": "任务中止成功",
+    "taskCancelError": "任务中止失败",
+    "taskRunningCannotCancel": "任务正在运行中，无法中止",
+    "taskCannotCancel": "当前任务状态不允许中止",
+    "taskCannotEdit": "任务已运行，无法编辑",
     "taskCopySuccess": "任务复制成功",
     "taskCopyError": "任务复制失败",
     "taskDeleteSuccess": "任务删除成功",
     "taskDeleteError": "任务删除失败",
     "startTask": "启动任务",
+    "cancelTask": "中止任务",
     "viewTask": "查看任务",
     "copyTask": "复制任务",
     "editTask": "编辑任务",
@@ -318,6 +324,14 @@
     "productName": "品名",
     "quantity": "数量",
     "order": "组别",
-    "productCount": "商品数量"
+    "productCount": "商品数量",
+    "status": "状态",
+    "statusCreated": "已创建",
+    "statusPending": "等待中",
+    "statusActive": "运行中",
+    "statusRetry": "重试中",
+    "statusCompleted": "已完成",
+    "statusCancelled": "已取消",
+    "statusFailed": "失败"
   }
 }

@@ -9,16 +9,9 @@ export namespace TaskApi {
     order: number;
   }
 
-  /** 订单日志信息 */
-  export interface OrderLogInfo {
-    orderNumber: number;
-    status: string;
-  }
-
   /** 解析商品文件返回结果 */
   export interface ParseProductsResult {
     products: ProductInfo[];
-    ordersPreview: OrderLogInfo[];
     productCount: number;
     orderCount: number;
     parseSuccess: boolean;
@@ -48,7 +41,6 @@ export namespace TaskApi {
     startTime?: string;
     isPolling?: boolean;
     products: ProductInfo[];
-    ordersLog?: OrderLogInfo[];
   }
 
   /** 任务信息 */
@@ -62,7 +54,6 @@ export namespace TaskApi {
     isScheduled: boolean;
     startTime: string | null;
     products: ProductInfo[];
-    ordersLog: OrderLogInfo[];
     status: string;
     productCount: number;
     orderCount: number;
@@ -82,7 +73,6 @@ export namespace TaskApi {
     startTime?: string;
     isPolling?: boolean;
     products?: ProductInfo[];
-    ordersLog?: OrderLogInfo[];
   }
 
   /** 更新任务返回结果 */
@@ -113,6 +103,36 @@ export namespace TaskApi {
 
   /** 复制任务返回结果 */
   export interface CopyTaskResult extends TaskItem {}
+
+  /** 启动任务返回结果 */
+  export interface StartTaskResult {
+    taskId: number;
+    taskKey: string;
+    brand: string;
+    account: string;
+    isScheduled: boolean;
+    isPolling: boolean;
+    startTime: string | null;
+    productCount: number;
+    actualOrderCount: number;
+    startedAt: string;
+    message: string;
+  }
+
+  /** 取消任务返回结果 */
+  export interface CancelTaskResult {
+    taskId: number;
+    taskKey: string;
+    brand: string;
+    account: string;
+    originalStatus: string;
+    newStatus: string;
+    isScheduled: boolean;
+    isPolling: boolean;
+    startTime: string | null;
+    taskStopped: boolean;
+    cancelledAt: string;
+  }
 }
 
 /**
@@ -181,4 +201,18 @@ export async function deleteTaskApi(id: number) {
  */
 export async function getTaskByIdApi(id: number) {
   return requestClient.post<TaskApi.TaskDetailResult>(`/tasks/${id}/read`);
+}
+
+/**
+ * 启动任务
+ */
+export async function startTaskApi(id: number) {
+  return requestClient.post<TaskApi.StartTaskResult>(`/tasks/${id}/start`);
+}
+
+/**
+ * 取消任务
+ */
+export async function cancelTaskApi(id: number) {
+  return requestClient.post<TaskApi.CancelTaskResult>(`/tasks/${id}/cancel`);
 }

@@ -33,8 +33,8 @@ export namespace AccountInfoApi {
     startTime: string | null;
     isPolling: boolean;
     isEditable: boolean;
+    status: string;
     products: any[];
-    ordersLog: any[];
   }
 
   /** 抢购账号信息 */

@@ -12,7 +12,7 @@ import { Eye, EyeOff } from '@vben/icons';
 import { $t } from '#/locales';
 import { getUserActivitiesApi } from '#/api/core/activity';
 import { listAccountInfosApi, deleteAccountInfoApi } from '#/api/core/account-info';
-import { deleteTaskApi, copyTaskApi } from '#/api/core/task';
+import { deleteTaskApi, copyTaskApi, startTaskApi, cancelTaskApi } from '#/api/core/task';
 import dayjs from 'dayjs';
 
 import AccountInfoModal from './account-info-modal.vue';
@@ -287,6 +287,25 @@ const taskColumns: ColumnsType = [
     }
   },
   {
+    title: $t('page.task.status'),
+    dataIndex: 'status',
+    key: 'status',
+    width: 120,
+    customRender: ({ text }: { text: string }) => {
+      const statusMap: Record<string, { text: string; color: string }> = {
+        'CREATED': { text: $t('page.task.statusCreated'), color: 'blue' },
+        'PENDING': { text: $t('page.task.statusPending'), color: 'orange' },
+        'ACTIVE': { text: $t('page.task.statusActive'), color: 'green' },
+        'RETRY': { text: $t('page.task.statusRetry'), color: 'purple' },
+        'COMPLETED': { text: $t('page.task.statusCompleted'), color: 'success' },
+        'CANCELLED': { text: $t('page.task.statusCancelled'), color: 'default' },
+        'FAILED': { text: $t('page.task.statusFailed'), color: 'error' }
+      };
+      const status = statusMap[text] || { text: text, color: 'default' };
+      return h(Tag, { color: status.color }, () => status.text);
+    }
+  },
+  {
     title: $t('page.common.action'),
     key: 'action',
     width: 140,
@@ -330,10 +349,11 @@ async function fetchAccountInfoList() {
     accountInfoData.value = result;
     accountInfoList.value = result.accountInfos;
     
-    // 提取任务数据到映射中
+    // 提取任务数据到映射中，按任务ID排序
     result.accountInfos.forEach(accountInfo => {
       if (accountInfo.tasks && accountInfo.tasks.length > 0) {
-        accountTasksMap.value[accountInfo.id] = accountInfo.tasks;
+        // 按任务ID升序排序
+        accountTasksMap.value[accountInfo.id] = accountInfo.tasks.sort((a, b) => a.id - b.id);
       } else {
         accountTasksMap.value[accountInfo.id] = [];
       }
@@ -446,6 +466,12 @@ function handleViewTask(taskRecord: AccountInfoApi.TaskInfo, accountId: number) 
 
 // 处理编辑任务
 function handleEditTask(taskRecord: AccountInfoApi.TaskInfo, accountId: number) {
+  // 检查任务是否可以编辑
+  if (!canEditTask(taskRecord)) {
+    message.warning($t('page.accountInfo.taskCannotEdit'));
+    return;
+  }
+
   // 从最新的任务映射中获取任务数据，确保编辑时使用最新信息
   const currentTasks = accountTasksMap.value[accountId] || [];
   const latestTaskData = currentTasks.find(task => task.id === taskRecord.id) || taskRecord;
@@ -463,13 +489,50 @@ function handleEditTask(taskRecord: AccountInfoApi.TaskInfo, accountId: number) 
   }).open();
 }
 
+// 检查任务是否可以启动
+function canStartTask(taskRecord: AccountInfoApi.TaskInfo): boolean {
+  // 只有 CREATED, COMPLETED, FAILED, CANCELLED 状态的任务可以启动
+  const startableStatuses = ['CREATED', 'COMPLETED', 'FAILED', 'CANCELLED'];
+  return startableStatuses.includes(taskRecord.status);
+}
+
+// 检查任务是否可以中止
+function canCancelTask(taskRecord: AccountInfoApi.TaskInfo): boolean {
+  // 只有 PENDING 状态的任务可以中止（定时任务等待中或轮询任务等待下次执行）
+  return taskRecord.status === 'PENDING';
+}
+
+// 检查任务是否可以编辑
+function canEditTask(taskRecord: AccountInfoApi.TaskInfo): boolean {
+  // 只有 isEditable 为 true 的任务可以编辑
+  return taskRecord.isEditable;
+}
+
 // 处理启动任务
 async function handleStartTask(taskRecord: AccountInfoApi.TaskInfo, accountId: number) {
   try {
-    // TODO: 这里后续需要调用启动任务的API
+    await startTaskApi(taskRecord.id);
     message.success($t('page.accountInfo.taskStartSuccess'));
+    await fetchAccountInfoList();
   } catch (error) {
     message.error($t('page.accountInfo.taskStartError'));
+  }
+}
+
+// 处理中止任务
+async function handleCancelTask(taskRecord: AccountInfoApi.TaskInfo) {
+  // 检查任务状态，只有 PENDING 状态的任务可以中止
+  if (taskRecord.status !== 'PENDING') {
+    message.warning($t('page.accountInfo.taskCannotCancel'));
+    return;
+  }
+  
+  try {
+    await cancelTaskApi(taskRecord.id);
+    message.success($t('page.accountInfo.taskCancelSuccess'));
+    await fetchAccountInfoList();
+  } catch (error) {
+    message.error($t('page.accountInfo.taskCancelError'));
   }
 }
 
@@ -616,7 +679,11 @@ onMounted(async () => {
                 >
                   <template #bodyCell="{ column, record: taskRecord }">
                     <template v-if="column.key === 'action'">
-                      <Tooltip :title="$t('page.accountInfo.startTask')">
+                      <!-- 启动任务按钮 - 只在任务可以启动时显示 -->
+                      <Tooltip 
+                        v-if="canStartTask(taskRecord as AccountInfoApi.TaskInfo)" 
+                        :title="$t('page.accountInfo.startTask')"
+                      >
                         <Button 
                           type="text" 
                           size="small"
@@ -626,6 +693,42 @@ onMounted(async () => {
                         >
                           <template #icon>
                             <span class="icon-[mdi--play] size-4"></span>
+                          </template>
+                        </Button>
+                      </Tooltip>
+                      
+                      <!-- 中止任务按钮 - 只在任务可以中止时显示 -->
+                      <Tooltip 
+                        v-if="canCancelTask(taskRecord as AccountInfoApi.TaskInfo)" 
+                        :title="$t('page.accountInfo.cancelTask')"
+                      >
+                        <Button 
+                          type="text" 
+                          size="small"
+                          class="mr-2"
+                          @click="() => handleCancelTask(taskRecord as AccountInfoApi.TaskInfo)"
+                          style="color: #ff4d4f;"
+                        >
+                          <template #icon>
+                            <span class="icon-[mdi--stop] size-4"></span>
+                          </template>
+                        </Button>
+                      </Tooltip>
+                      
+                      <!-- 运行中任务按钮 - 显示运行状态，无法中止 -->
+                      <Tooltip 
+                        v-if="taskRecord.status === 'ACTIVE' || taskRecord.status === 'RETRY'" 
+                        :title="$t('page.accountInfo.taskRunningCannotCancel')"
+                      >
+                        <Button 
+                          type="text" 
+                          size="small"
+                          class="mr-2"
+                          style="color: #faad14;"
+                          disabled
+                        >
+                          <template #icon>
+                            <span class="icon-[mdi--stop] size-4"></span>
                           </template>
                         </Button>
                       </Tooltip>
@@ -658,12 +761,13 @@ onMounted(async () => {
                         </Button>
                       </Tooltip>
                       
-                      <Tooltip :title="$t('page.accountInfo.editTask')">
+                      <Tooltip :title="canEditTask(taskRecord as AccountInfoApi.TaskInfo) ? $t('page.accountInfo.editTask') : $t('page.accountInfo.taskCannotEdit')">
                         <Button 
                           type="text" 
                           size="small"
                           class="mr-2"
                           @click="() => handleEditTask(taskRecord as AccountInfoApi.TaskInfo, record.id)"
+                          :disabled="!canEditTask(taskRecord as AccountInfoApi.TaskInfo)"
                           style="color: #1890ff;"
                         >
                           <template #icon>
