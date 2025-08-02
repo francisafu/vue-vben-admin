@@ -283,7 +283,7 @@ const taskColumns: ColumnsType = [
     key: 'isPolling',
     width: 100,
     customRender: ({ text }: { text: boolean }) => {
-      return text ? $t('page.common.yes') : $t('page.common.no');
+      return h('span', { style: text ? { color: '#ff4d4f' } : {} }, text ? $t('page.common.yes') : $t('page.common.no'));
     }
   },
   {
@@ -780,17 +780,15 @@ onMounted(async () => {
                         :title="$t('page.common.confirmDelete')"
                         @confirm="() => handleDeleteTask(taskRecord as AccountInfoApi.TaskInfo)"
                       >
-                        <Tooltip :title="$t('page.accountInfo.deleteTask')">
-                          <Button 
-                            type="text" 
-                            size="small"
-                            style="color: #ff4d4f;"
-                          >
-                            <template #icon>
-                              <span class="icon-[mdi--delete] size-4"></span>
-                            </template>
-                          </Button>
-                        </Tooltip>
+                        <Button 
+                          type="text" 
+                          size="small"
+                          style="color: #ff4d4f;"
+                        >
+                          <template #icon>
+                            <span class="icon-[mdi--delete] size-4"></span>
+                          </template>
+                        </Button>
                       </Popconfirm>
                     </template>
                   </template>
