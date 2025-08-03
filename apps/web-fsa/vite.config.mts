@@ -9,9 +9,14 @@ export default defineConfig(async () => {
           '/api': {
             changeOrigin: true,
             rewrite: (path) => path.replace(/^\/api/, ''),
-            // mock代理目标地址
             target: 'http://localhost:3000/api',
             ws: true,
+          },
+          // 添加Socket.io代理
+          '/socket.io': {
+            target: 'http://localhost:3000',
+            ws: true,
+            changeOrigin: true,
           },
         },
       },

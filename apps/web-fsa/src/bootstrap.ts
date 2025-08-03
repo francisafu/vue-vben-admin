@@ -44,6 +44,10 @@ async function bootstrap(namespace: string) {
 
   // 安装权限指令
   registerAccessDirective(app);
+  
+  // 初始化Socket连接
+  const { initializeSocket } = await import('#/composables/useSocket');
+  initializeSocket();
 
   // 初始化 tippy
   const { initTippy } = await import('@vben/common-ui/es/tippy');

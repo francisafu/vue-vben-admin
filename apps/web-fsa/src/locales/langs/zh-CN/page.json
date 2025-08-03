@@ -95,6 +95,7 @@
     "updateAccountInfoError": "更新账号失败",
     "deleteAccountInfoSuccess": "删除账号成功",
     "deleteAccountInfoError": "删除账号失败",
+    "realtimeUpdate": "实时更新",
     "taskList": "任务列表",
     "accountTaskList": "账号 {account} 的任务列表",
     "createTask": "新建任务",
@@ -286,7 +287,10 @@
     "add": "添加",
     "confirmDelete": "确定要删除吗？",
     "update": "更新",
-    "close": "关闭"
+    "close": "关闭",
+    "connected": "已连接",
+    "disconnected": "未连接",
+    "connecting": "连接中"
   },
   "task": {
     "viewTask": "查看任务",

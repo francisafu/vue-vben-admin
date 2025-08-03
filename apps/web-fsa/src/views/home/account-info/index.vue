@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { ActivityApi, AccountInfoApi } from '#/api/core';
 
-import { onMounted, ref, computed, h } from 'vue';
+import { onMounted, onUnmounted, ref, computed, h } from 'vue';
 
 import { Page, useVbenModal, useVbenDrawer } from '@vben/common-ui';
 
@@ -14,6 +14,8 @@ import { getUserActivitiesApi } from '#/api/core/activity';
 import { listAccountInfosApi, deleteAccountInfoApi } from '#/api/core/account-info';
 import { deleteTaskApi, copyTaskApi, startTaskApi, cancelTaskApi } from '#/api/core/task';
 import dayjs from 'dayjs';
+import { useSocket, SocketStatus } from '#/composables/useSocket';
+import type { TaskStatusUpdate } from '#/composables/useSocket';
 
 import AccountInfoModal from './account-info-modal.vue';
 import AccountInfoTaskDrawer from './account-info-task-drawer.vue';
@@ -42,6 +44,11 @@ const showAddress = ref(true);
 const accountTasksMap = ref<Record<number, AccountInfoApi.TaskInfo[]>>({});
 const accountTasksLoadingMap = ref<Record<number, boolean>>({});
 
+// Socket连接
+const { subscribeUserTasks, connectionStatus } = useSocket();
+// 存储取消订阅函数
+const taskUnsubscribers = ref<Array<() => void>>([]);
+
 // Modal配置
 const [Modal, modalApi] = useVbenModal({
   connectedComponent: AccountInfoModal,
@@ -62,8 +69,51 @@ const [TaskDrawer, taskDrawerApi] = useVbenDrawer({
   onOpenChange: async (isOpen: boolean) => {
     if (!isOpen) {
       const data = taskDrawerApi.getData<Record<string, any>>();
-      if (data && data.operationSuccess) {
-        // 任务操作成功后，刷新账号列表
+      if (data && data.operationSuccess && data.task) {
+        // 任务操作成功后，更新本地数据
+        const accountId = data.accountId;
+        const task = data.task;
+        const isNewTask = data.isNewTask;
+        
+        if (isNewTask) {
+          // 新建任务
+          if (!accountTasksMap.value[accountId]) {
+            accountTasksMap.value[accountId] = [];
+          }
+          accountTasksMap.value[accountId] = [...accountTasksMap.value[accountId], task];
+          
+          // 更新账号信息中的任务计数
+          const accountIndex = accountInfoList.value.findIndex(account => account.id === accountId);
+          if (accountIndex !== -1 && accountInfoList.value[accountIndex]) {
+            accountInfoList.value[accountIndex].taskCount = (accountInfoList.value[accountIndex].taskCount || 0) + 1;
+            if (accountInfoList.value[accountIndex].tasks) {
+              accountInfoList.value[accountIndex].tasks = accountTasksMap.value[accountId];
+            }
+          }
+          
+          // 订阅新任务的状态更新
+          const { subscribeTaskStatus } = useSocket();
+          const unsub = subscribeTaskStatus(task.id, handleTaskStatusUpdate);
+          if (unsub) {
+            taskUnsubscribers.value.push(unsub);
+          }
+        } else {
+          // 编辑任务
+          const tasks = accountTasksMap.value[accountId] || [];
+          const taskIndex = tasks.findIndex(t => t.id === task.id);
+          if (taskIndex !== -1) {
+            tasks[taskIndex] = task;
+            accountTasksMap.value[accountId] = [...tasks];
+            
+            // 更新账号信息中的任务数据
+            const accountIndex = accountInfoList.value.findIndex(account => account.id === accountId);
+            if (accountIndex !== -1 && accountInfoList.value[accountIndex]?.tasks) {
+              accountInfoList.value[accountIndex].tasks = tasks;
+            }
+          }
+        }
+      } else if (data && data.operationSuccess) {
+        // 如果没有返回任务信息，则刷新列表
         await fetchAccountInfoList();
       }
     }
@@ -349,11 +399,24 @@ async function fetchAccountInfoList() {
     accountInfoData.value = result;
     accountInfoList.value = result.accountInfos;
     
+    // 取消之前的所有任务订阅
+    taskUnsubscribers.value.forEach(unsub => unsub());
+    taskUnsubscribers.value = [];
+    
     // 提取任务数据到映射中，按任务ID排序
+    const { subscribeTaskStatus } = useSocket();
     result.accountInfos.forEach(accountInfo => {
       if (accountInfo.tasks && accountInfo.tasks.length > 0) {
         // 按任务ID升序排序
         accountTasksMap.value[accountInfo.id] = accountInfo.tasks.sort((a, b) => a.id - b.id);
+        
+        // 订阅每个任务的状态更新
+        accountInfo.tasks.forEach(task => {
+          const unsub = subscribeTaskStatus(task.id, handleTaskStatusUpdate);
+          if (unsub) {
+            taskUnsubscribers.value.push(unsub);
+          }
+        });
       } else {
         accountTasksMap.value[accountInfo.id] = [];
       }
@@ -509,11 +572,11 @@ function canEditTask(taskRecord: AccountInfoApi.TaskInfo): boolean {
 }
 
 // 处理启动任务
-async function handleStartTask(taskRecord: AccountInfoApi.TaskInfo, accountId: number) {
+async function handleStartTask(taskRecord: AccountInfoApi.TaskInfo) {
   try {
     await startTaskApi(taskRecord.id);
     message.success($t('page.accountInfo.taskStartSuccess'));
-    await fetchAccountInfoList();
+    // Socket会自动推送状态更新，无需刷新页面
   } catch (error) {
     message.error($t('page.accountInfo.taskStartError'));
   }
@@ -530,7 +593,7 @@ async function handleCancelTask(taskRecord: AccountInfoApi.TaskInfo) {
   try {
     await cancelTaskApi(taskRecord.id);
     message.success($t('page.accountInfo.taskCancelSuccess'));
-    await fetchAccountInfoList();
+    // Socket会自动推送状态更新，无需刷新页面
   } catch (error) {
     message.error($t('page.accountInfo.taskCancelError'));
   }
@@ -539,9 +602,32 @@ async function handleCancelTask(taskRecord: AccountInfoApi.TaskInfo) {
 // 处理复制任务
 async function handleCopyTask(taskRecord: AccountInfoApi.TaskInfo, accountId: number) {
   try {
-    await copyTaskApi(taskRecord.id, { accountId: accountId });
+    const newTask = await copyTaskApi(taskRecord.id, { accountId: accountId });
     message.success($t('page.accountInfo.taskCopySuccess'));
-    await fetchAccountInfoList();
+    
+    // 手动添加新任务到本地数据
+    if (newTask && accountTasksMap.value[accountId]) {
+      accountTasksMap.value[accountId] = [...accountTasksMap.value[accountId], newTask];
+      
+      // 更新账号信息中的任务计数
+      const accountIndex = accountInfoList.value.findIndex(account => account.id === accountId);
+      if (accountIndex !== -1 && accountInfoList.value[accountIndex]) {
+        accountInfoList.value[accountIndex].taskCount = (accountInfoList.value[accountIndex].taskCount || 0) + 1;
+        if (accountInfoList.value[accountIndex].tasks) {
+          accountInfoList.value[accountIndex].tasks = accountTasksMap.value[accountId];
+        }
+      }
+      
+      // 订阅新任务的状态更新
+      const { subscribeTaskStatus } = useSocket();
+      const unsub = subscribeTaskStatus(newTask.id, handleTaskStatusUpdate);
+      if (unsub) {
+        taskUnsubscribers.value.push(unsub);
+      }
+    } else {
+      // 如果没有返回新任务信息，则刷新列表
+      await fetchAccountInfoList();
+    }
   } catch (error) {
     message.error($t('page.accountInfo.taskCopyError'));
   }
@@ -552,7 +638,26 @@ async function handleDeleteTask(taskRecord: AccountInfoApi.TaskInfo) {
   try {
     await deleteTaskApi(taskRecord.id);
     message.success($t('page.accountInfo.taskDeleteSuccess'));
-    await fetchAccountInfoList();
+    
+    // 手动从本地数据中移除任务
+    for (const [accountId, tasks] of Object.entries(accountTasksMap.value)) {
+      const taskIndex = tasks.findIndex(task => task.id === taskRecord.id);
+      if (taskIndex !== -1) {
+        // 移除任务
+        tasks.splice(taskIndex, 1);
+        accountTasksMap.value[Number(accountId)] = [...tasks];
+        
+        // 更新账号信息中的任务计数
+        const accountIndex = accountInfoList.value.findIndex(account => account.id === Number(accountId));
+        if (accountIndex !== -1 && accountInfoList.value[accountIndex]) {
+          accountInfoList.value[accountIndex].taskCount = Math.max(0, (accountInfoList.value[accountIndex].taskCount || 0) - 1);
+          if (accountInfoList.value[accountIndex].tasks) {
+            accountInfoList.value[accountIndex].tasks = tasks;
+          }
+        }
+        break;
+      }
+    }
   } catch (error) {
     message.error($t('page.accountInfo.taskDeleteError'));
   }
@@ -563,12 +668,58 @@ function updateCurrentTime() {
   currentTime.value = dayjs().format('YYYY-MM-DD HH:mm:ss');
 }
 
+// 处理任务状态更新
+function handleTaskStatusUpdate(update: TaskStatusUpdate) {
+  // 遍历所有账号的任务，找到对应的任务并更新状态
+  for (const [accountId, tasks] of Object.entries(accountTasksMap.value)) {
+    const taskIndex = tasks.findIndex(task => task.id === update.taskId);
+    if (taskIndex !== -1 && tasks[taskIndex]) {
+      // 更新任务状态
+      tasks[taskIndex].status = update.status;
+      
+      // 如果任务状态变为运行中，则不可编辑
+      if (update.status === 'PENDING' || update.status === 'ACTIVE' || update.status === 'RETRY') {
+        tasks[taskIndex].isEditable = false;
+      }
+      
+      // 触发响应式更新
+      accountTasksMap.value[Number(accountId)] = [...tasks];
+      
+      // 更新账号信息中的任务数据
+      const accountIndex = accountInfoList.value.findIndex(account => account.id === Number(accountId));
+      if (accountIndex !== -1 && accountInfoList.value[accountIndex]?.tasks) {
+        accountInfoList.value[accountIndex].tasks = tasks;
+      }
+      
+      break;
+    }
+  }
+}
+
+// 时间更新定时器
+let timeInterval: ReturnType<typeof setInterval> | null = null;
+
 // 初始化页面
 onMounted(async () => {
   await fetchUserActivities();
   
+  // 订阅用户的所有任务更新
+  subscribeUserTasks();
+  
   // 每秒更新当前时间
-  setInterval(updateCurrentTime, 1000);
+  timeInterval = setInterval(updateCurrentTime, 1000);
+});
+
+// 组件卸载时清理
+onUnmounted(() => {
+  // 取消所有任务订阅
+  taskUnsubscribers.value.forEach(unsub => unsub());
+  taskUnsubscribers.value = [];
+  
+  // 清除定时器
+  if (timeInterval) {
+    clearInterval(timeInterval);
+  }
 });
 </script>
 
@@ -591,6 +742,16 @@ onMounted(async () => {
             :options="activityOptions"
             @change="handleActivityChange"
           />
+          <Tag 
+            :color="connectionStatus === SocketStatus.CONNECTED ? 'success' : connectionStatus === SocketStatus.CONNECTING ? 'processing' : 'error'" 
+            class="ml-4"
+          >
+            {{ $t('page.accountInfo.realtimeUpdate') }}：{{ 
+              connectionStatus === SocketStatus.CONNECTED ? $t('page.common.connected') : 
+              connectionStatus === SocketStatus.CONNECTING ? $t('page.common.connecting') : 
+              $t('page.common.disconnected') 
+            }}
+          </Tag>
         </div>
       </Card>
 
@@ -688,7 +849,7 @@ onMounted(async () => {
                           type="text" 
                           size="small"
                           class="mr-2"
-                          @click="() => handleStartTask(taskRecord as AccountInfoApi.TaskInfo, record.id)"
+                          @click="() => handleStartTask(taskRecord as AccountInfoApi.TaskInfo)"
                           style="color: #52c41a;"
                         >
                           <template #icon>
