@@ -18,12 +18,22 @@ export interface TaskStatusUpdate {
   updatedAt: string;
 }
 
-// 任务日志更新事件
-export interface TaskLogUpdate {
-  taskId: number;
-  log: string;
+// 任务日志条目
+export interface TaskLogEntry {
   timestamp: string;
+  level: string;
+  message: string;
+  metadata?: Record<string, any>;
 }
+
+// 任务日志批量更新事件
+export interface TaskLogBatch {
+  taskId: number;
+  logs: TaskLogEntry[];
+}
+
+// 兼容旧接口
+export type TaskLogUpdate = TaskLogBatch;
 
 // Socket实例
 let socket: Socket | null = null;
@@ -120,10 +130,8 @@ export function initializeSocket() {
     }
   });
 
-  // 任务日志更新
-  socket.on('task:log-update', (data: TaskLogUpdate) => {
-    
-    
+  // 任务日志批量更新
+  socket.on('task:logs:batch', (data: TaskLogBatch) => {
     // 通知该任务的所有订阅者
     const subscribers = taskLogSubscribers.get(data.taskId);
     if (subscribers) {
@@ -188,17 +196,14 @@ export function subscribeTaskStatus(taskId: number, callback: (update: TaskStatu
  */
 export function subscribeTaskLog(taskId: number, callback: (update: TaskLogUpdate) => void) {
   if (!socket?.connected) {
-
     return () => {};
   }
 
   // 添加订阅者
   if (!taskLogSubscribers.has(taskId)) {
     taskLogSubscribers.set(taskId, new Set());
-    // 如果还没有订阅该任务，向服务器订阅
-    if (!taskStatusSubscribers.has(taskId)) {
-      socket.emit('subscribe:task', taskId);
-    }
+    // 向服务器订阅任务日志
+    socket.emit('task:logs:subscribe', taskId);
   }
   taskLogSubscribers.get(taskId)?.add(callback);
 
@@ -207,13 +212,11 @@ export function subscribeTaskLog(taskId: number, callback: (update: TaskLogUpdat
     const subscribers = taskLogSubscribers.get(taskId);
     if (subscribers) {
       subscribers.delete(callback);
-      // 如果没有订阅者了，检查是否需要取消订阅
+      // 如果没有订阅者了，取消订阅
       if (subscribers.size === 0) {
         taskLogSubscribers.delete(taskId);
-        // 如果状态订阅者也没有了，向服务器取消订阅
-        if (!taskStatusSubscribers.has(taskId)) {
-          socket?.emit('unsubscribe:task', taskId);
-        }
+        // 向服务器取消订阅任务日志
+        socket?.emit('task:logs:unsubscribe', taskId);
       }
     }
   };
@@ -273,10 +276,21 @@ export function useSocket() {
       unsubscribers.push(unsub);
       return unsub;
     },
-    subscribeTaskLog: (taskId: number, callback: (update: TaskLogUpdate) => void) => {
+    subscribeTaskLogs: (taskId: number, callback: (update: TaskLogUpdate) => void) => {
       const unsub = subscribeTaskLog(taskId, callback);
-      unsubscribers.push(unsub);
+      if (unsub) {
+        unsubscribers.push(unsub);
+      }
       return unsub;
+    },
+    unsubscribeTaskLogs: (taskId: number) => {
+      // 取消订阅任务日志
+      const subscribers = taskLogSubscribers.get(taskId);
+      if (subscribers) {
+        subscribers.clear();
+        taskLogSubscribers.delete(taskId);
+        socket?.emit('task:logs:unsubscribe', taskId);
+      }
     },
     subscribeUserTasks,
     sendPing,

@@ -113,6 +113,17 @@
     "taskCopyError": "任务复制失败",
     "taskDeleteSuccess": "任务删除成功",
     "taskDeleteError": "任务删除失败",
+    "viewLogs": "查看日志",
+    "taskLogs": "任务日志",
+    "taskName": "任务名称",
+    "logLevel": "日志级别",
+    "searchLogs": "搜索日志内容",
+    "autoScroll": "自动滚动",
+    "clearDisplay": "清空显示",
+    "logCount": "日志数量",
+    "loadingLogs": "正在加载日志...",
+    "noLogs": "暂无日志",
+    "newLogs": "新日志",
     "startTask": "启动任务",
     "cancelTask": "中止任务",
     "viewTask": "查看任务",
@@ -290,7 +301,8 @@
     "close": "关闭",
     "connected": "已连接",
     "disconnected": "未连接",
-    "connecting": "连接中"
+    "connecting": "连接中",
+    "all": "全部"
   },
   "task": {
     "viewTask": "查看任务",

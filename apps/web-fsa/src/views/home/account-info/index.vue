@@ -19,6 +19,7 @@ import type { TaskStatusUpdate } from '#/composables/useSocket';
 
 import AccountInfoModal from './account-info-modal.vue';
 import AccountInfoTaskDrawer from './account-info-task-drawer.vue';
+import TaskLogModal from './task-log-modal.vue';
 
 // 用户活动数据
 const userActivities = ref<ActivityApi.UserActivityItem[]>([]);
@@ -61,6 +62,11 @@ const [Modal, modalApi] = useVbenModal({
       }
     }
   }
+});
+
+// LogModal配置
+const [LogModal, logModalApi] = useVbenModal({
+  connectedComponent: TaskLogModal,
 });
 
 // Drawer配置
@@ -633,6 +639,14 @@ async function handleCopyTask(taskRecord: AccountInfoApi.TaskInfo, accountId: nu
   }
 }
 
+// 处理查看日志
+function handleViewLogs(taskRecord: AccountInfoApi.TaskInfo, accountInfo: AccountInfoApi.AccountInfoItem) {
+  logModalApi.setData({
+    taskId: taskRecord.id,
+    taskName: `${accountInfo.account} - ${dayjs(taskRecord.startTime).format('MM-DD HH:mm') || $t('page.accountInfo.immediate')}`
+  }).open();
+}
+
 // 处理删除任务
 async function handleDeleteTask(taskRecord: AccountInfoApi.TaskInfo) {
   try {
@@ -727,6 +741,7 @@ onUnmounted(() => {
   <Page>
     <Modal />
     <TaskDrawer />
+    <LogModal />
     <div class="p-4">
       <h1 class="mb-4 text-2xl font-bold">{{ $t('page.accountInfo.title') }}</h1>
 
@@ -904,6 +919,20 @@ onUnmounted(() => {
                         >
                           <template #icon>
                             <span class="icon-[mdi--file-document-outline] size-4"></span>
+                          </template>
+                        </Button>
+                      </Tooltip>
+                      
+                      <Tooltip :title="$t('page.accountInfo.viewLogs')">
+                        <Button 
+                          type="text" 
+                          size="small"
+                          class="mr-2"
+                          @click="() => handleViewLogs(taskRecord as AccountInfoApi.TaskInfo, record as AccountInfoApi.AccountInfoItem)"
+                          style="color: #2f54eb;"
+                        >
+                          <template #icon>
+                            <span class="icon-[mdi--text-box-outline] size-4"></span>
                           </template>
                         </Button>
                       </Tooltip>
