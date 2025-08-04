@@ -16,7 +16,8 @@
     "accountManage": "个人中心",
     "userManage": "用户管理",
     "activityManage": "活动管理",
-    "accountInfoManage": "抢购管理"
+    "accountInfoManage": "抢购管理",
+    "lorealDatabase": "欧莱雅数据库"
   },
   "account": {
     "title": "个人中心",

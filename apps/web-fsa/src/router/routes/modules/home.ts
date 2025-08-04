@@ -59,6 +59,16 @@ const routes: RouteRecordRaw[] = [
           title: $t('page.home.accountInfoManage'),
         },
       },
+      {
+        name: 'LorealDatabase',
+        path: '/home/loreal-database',
+        component: () => import('#/views/home/loreal-database/index.vue'),
+        meta: {
+          authority: ['ADMIN'],
+          icon: 'lucide:database',
+          title: $t('page.home.lorealDatabase'),
+        },
+      },
     ],
   },
 ];
