@@ -1,0 +1,1 @@
+window._VBEN_ADMIN_PRO_APP_CONF_={"VITE_GLOB_API_URL":"https://fsa-prod.zeabur.app/api","VITE_GLOB_SOCKET_URL":"https://fsa-prod.zeabur.app"};Object.freeze(window._VBEN_ADMIN_PRO_APP_CONF_);Object.defineProperty(window,"_VBEN_ADMIN_PRO_APP_CONF_",{configurable:false,writable:false,});
