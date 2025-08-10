@@ -17,7 +17,12 @@
     "userManage": "用户管理",
     "activityManage": "活动管理",
     "accountInfoManage": "抢购管理",
-    "lorealDatabase": "欧莱雅数据库"
+    "lorealDatabase": "欧莱雅数据库",
+    "lorealOfficial": "欧莱雅官网",
+    "esteeOfficial": "雅诗兰黛官网",
+    "loccitaneOfficial": "欧舒丹官网",
+    "analytics": "分析页",
+    "about": "关于"
   },
   "account": {
     "title": "个人中心",
@@ -270,18 +275,7 @@
       "month": "月"
     }
   },
-  "official":{
-    "title": "官网",
-    "loreal": "欧莱雅",
-    "estee": "雅诗兰黛",
-    "loccitane": "欧舒丹"
-  },
-  "maintain": {
-    "title": "运维",
-    "analytics": "分析页",
-    "demo": "演示",
-    "about": "关于"
-  },
+
   "common": {
     "save": "保存",
     "clear": "清空",
