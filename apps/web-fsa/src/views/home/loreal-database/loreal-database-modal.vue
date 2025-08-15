@@ -3,7 +3,6 @@ import { computed, ref } from 'vue';
 
 import { useVbenModal } from '@vben/common-ui';
 import { useVbenForm } from '#/adapter/form';
-import { $t } from '#/locales';
 import {
   createLorealDatabase,
   updateLorealDatabase
@@ -14,22 +13,11 @@ import { message } from 'ant-design-vue';
 const data = ref<Record<string, any>>({});
 const isUpdate = computed(() => data.value?.mode === 'update');
 const database = computed(() => data.value?.database);
-const activityOptions = computed(() => data.value?.activityOptions || []);
 const loading = ref(false);
 const submitting = ref(false);
 
 // 创建字段信息
-const createFields = [
-  {
-    component: 'Select',
-    componentProps: {
-      placeholder: '请选择欧莱雅活动',
-      options: activityOptions,
-    },
-    fieldName: 'activityId',
-    label: '选择活动',
-    rules: 'required',
-  },
+const createFields = computed(() => [
   {
     component: 'Input',
     componentProps: {
@@ -51,9 +39,9 @@ const createFields = [
     label: '欧莱雅密码',
     rules: 'required',
   },
-];
+]);
 
-const updateFields = [
+const updateFields = computed(() => [
   {
     component: 'Input',
     componentProps: {
@@ -75,9 +63,11 @@ const updateFields = [
     label: '欧莱雅密码',
     rules: 'required',
   },
-];
+]);
 
 // 表单配置
+const formSchema = computed(() => isUpdate.value ? updateFields.value : createFields.value);
+
 const [Form, formApi] = useVbenForm({
   layout: 'vertical',
   handleSubmit,
@@ -95,15 +85,15 @@ const [Form, formApi] = useVbenForm({
       class: 'w-full',
     },
   },
-  schema: computed(() => isUpdate.value ? updateFields : createFields),
+  schema: formSchema.value as any,
 });
 
-// 初始化modal
+// 初始化modal  
+const modalTitle = computed(() => isUpdate.value ? '更新欧莱雅数据库' : '添加欧莱雅数据库');
+
 const [Modal, modalApi] = useVbenModal({
-  title: computed(() => isUpdate.value ? '更新欧莱雅数据库' : '添加欧莱雅数据库'),
   draggable: true,
   footer: false,
-  width: 600,
   // 打开modal时获取数据
   async onOpenChange(isOpen: boolean) {
     if (isOpen) {
@@ -120,9 +110,8 @@ const [Modal, modalApi] = useVbenModal({
           password: ''
         });
       } else {
-        // 新建模式
+        // 新建模式：设置当前选定的活动ID
         formApi.setValues({
-          activityId: undefined,
           account: '',
           password: ''
         });
@@ -144,9 +133,15 @@ async function handleSubmit(values: any) {
       });
       message.success('更新成功');
     } else {
-      // 创建数据库
+      // 创建数据库，使用传入的活动ID
+      const activityId = data.value?.activityId;
+      if (!activityId) {
+        message.error('请先选择一个活动');
+        return;
+      }
+      
       await createLorealDatabase({
-        activityId: values.activityId,
+        activityId: activityId,
         account: values.account,
         password: values.password
       });
@@ -168,17 +163,23 @@ async function handleSubmit(values: any) {
 </script>
 
 <template>
-  <Modal>
+  <Modal :title="modalTitle">
     <div class="loreal-database-modal p-4">
       <div v-if="loading" class="flex-center py-10">
         <div class="text-center">加载中...</div>
       </div>
       <div v-else>
-        <div v-if="isUpdate" class="mb-4 p-4 bg-gray-50 rounded">
+        <div class="mb-4 p-4 bg-gray-50 rounded">
           <div class="text-sm text-gray-600">
-            <div class="mb-1">活动ID: {{ database?.activityId }}</div>
-            <div class="mb-1">当前商品数: {{ database?.productCount }} 个</div>
-            <div>上次爬取: {{ new Date(database?.scrapedAt).toLocaleString() }}</div>
+            <div v-if="isUpdate">
+              <div class="mb-1">活动ID: {{ database?.activityId }}</div>
+              <div class="mb-1">当前商品数: {{ database?.productCount }} 个</div>
+              <div>上次爬取: {{ new Date(database?.scrapedAt).toLocaleString() }}</div>
+            </div>
+            <div v-else>
+              <div class="mb-1">当前选择的活动ID: {{ data?.activityId }}</div>
+              <div>即将为此活动爬取商品数据</div>
+            </div>
           </div>
         </div>
         

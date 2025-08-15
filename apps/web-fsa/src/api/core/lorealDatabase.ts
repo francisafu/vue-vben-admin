@@ -59,5 +59,5 @@ export function getActivityList(data: {
   pageSize?: number;
   brand?: string;
 }) {
-  return requestClient.post('/activities/list', data);
+  return requestClient.post('/lorealdb/activities', data);
 }
