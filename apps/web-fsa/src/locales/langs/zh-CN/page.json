@@ -140,7 +140,14 @@
     "fetchUserAddressError": "获取用户地址失败",
     "addAddressInProfile": "请先在个人中心添加地址",
     "fetchAddressRetry": "获取地址失败，请重试",
-    "invalidUserId": "无效的用户ID"
+    "invalidUserId": "无效的用户ID",
+    "exportOrders": "导出订单",
+    "exportOrdersTitle": "导出订单确认",
+    "exportOrdersWarning": "确定要导出该账号的订单数据吗？",
+    "exportOrdersWarningRunning": "警告：该任务正在运行中！导出订单可能会中断任务执行。请确保任务已经完成或暂停后再导出。是否继续？",
+    "exportingOrders": "正在导出订单数据...",
+    "exportOrdersSuccess": "订单数据导出成功",
+    "exportOrdersError": "订单数据导出失败"
   },
   "user": {
     "title": "用户管理",

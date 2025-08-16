@@ -5,14 +5,14 @@ import { onMounted, onUnmounted, ref, computed, h } from 'vue';
 
 import { Page, useVbenModal, useVbenDrawer } from '@vben/common-ui';
 
-import { Card, message, Select, Table, Descriptions, Tag, Button, Popconfirm, Tooltip } from 'ant-design-vue';
+import { Card, message, Select, Table, Descriptions, Tag, Button, Popconfirm, Tooltip, Modal as AntModal } from 'ant-design-vue';
 import type { ColumnsType } from 'ant-design-vue/es/table';
 
 import { Eye, EyeOff } from '@vben/icons';
 import { $t } from '#/locales';
 import { getUserActivitiesApi } from '#/api/core/activity';
 import { listAccountInfosApi, deleteAccountInfoApi } from '#/api/core/account-info';
-import { deleteTaskApi, copyTaskApi, startTaskApi, cancelTaskApi } from '#/api/core/task';
+import { deleteTaskApi, copyTaskApi, startTaskApi, cancelTaskApi, exportOrdersApi } from '#/api/core/task';
 import dayjs from 'dayjs';
 import { useSocket, SocketStatus } from '#/composables/useSocket';
 import type { TaskStatusUpdate } from '#/composables/useSocket';
@@ -292,7 +292,7 @@ const columns: ColumnsType = [
   {
     title: $t('page.common.action'),
     key: 'action',
-    width: 160,
+    width: 220,
     fixed: 'right'
   }
 ];
@@ -677,6 +677,55 @@ async function handleDeleteTask(taskRecord: AccountInfoApi.TaskInfo) {
   }
 }
 
+// 处理导出账号订单
+async function handleExportAccountOrders(accountInfo: AccountInfoApi.AccountInfoItem) {
+  // 检查该账号是否有正在运行的任务
+  const accountTasks = accountTasksMap.value[accountInfo.id] || [];
+  const hasRunningTask = accountTasks.some(task => 
+    task.status === 'ACTIVE' || task.status === 'PENDING' || task.status === 'RETRY'
+  );
+  
+  AntModal.confirm({
+    title: $t('page.accountInfo.exportOrdersTitle'),
+    content: hasRunningTask 
+      ? $t('page.accountInfo.exportOrdersWarningRunning')
+      : $t('page.accountInfo.exportOrdersWarning'),
+    okText: $t('page.common.confirm'),
+    cancelText: $t('page.common.cancel'),
+    okType: hasRunningTask ? 'danger' : 'primary',
+    async onOk() {
+      try {
+        // 显示加载提示
+        const loadingMessage = message.loading($t('page.accountInfo.exportingOrders'), 0);
+        
+        // 调用导出API - 传递账号ID和活动ID
+        const blob = await exportOrdersApi({
+          accountId: accountInfo.id,
+          activityId: selectedActivityId.value!
+        });
+        
+        // 关闭加载提示
+        loadingMessage();
+        
+        // 处理返回的Excel文件（response已经是blob）
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `orders_${accountInfo.account}_${dayjs().format('YYYYMMDD_HHmmss')}.xlsx`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+        
+        message.success($t('page.accountInfo.exportOrdersSuccess'));
+      } catch (error: any) {
+        console.error('导出订单失败:', error);
+        message.error($t('page.accountInfo.exportOrdersError') + ': ' + (error.message || '未知错误'));
+      }
+    }
+  });
+}
+
 // 更新当前时间
 function updateCurrentTime() {
   currentTime.value = dayjs().format('YYYY-MM-DD HH:mm:ss');
@@ -1006,6 +1055,13 @@ onUnmounted(() => {
                     {{ $t('page.common.delete') }}
                   </Button>
                 </Popconfirm>
+                <Button 
+                  type="link" 
+                  @click="() => handleExportAccountOrders(record as AccountInfoApi.AccountInfoItem)"
+                  style="color: #13c2c2;"
+                >
+                  {{ $t('page.accountInfo.exportOrders') }}
+                </Button>
               </template>
             </template>
 

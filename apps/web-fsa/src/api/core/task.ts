@@ -1,4 +1,4 @@
-import { requestClient } from '#/api/request';
+import { requestClient, baseRequestClient } from '#/api/request';
 
 export namespace TaskApi {
   /** 商品信息 */
@@ -133,6 +133,12 @@ export namespace TaskApi {
     taskStopped: boolean;
     cancelledAt: string;
   }
+
+  /** 导出订单参数 */
+  export interface ExportOrdersParams {
+    accountId: number;
+    activityId: number;
+  }
 }
 
 /**
@@ -215,4 +221,25 @@ export async function startTaskApi(id: number) {
  */
 export async function cancelTaskApi(id: number) {
   return requestClient.post<TaskApi.CancelTaskResult>(`/tasks/${id}/cancel`);
+}
+
+/**
+ * 导出订单数据为Excel
+ */
+export async function exportOrdersApi(data: TaskApi.ExportOrdersParams) {
+  // 使用baseRequestClient来处理blob响应，因为requestClient会自动提取data字段
+  // 需要手动添加认证token
+  const { useAccessStore } = await import('@vben/stores');
+  const accessStore = useAccessStore();
+  const token = accessStore.accessToken;
+  
+  const response = await baseRequestClient.post(`/tasks/export-orders`, data, {
+    responseType: 'blob',
+    headers: {
+      Authorization: token ? `Bearer ${token}` : '',
+    },
+  });
+  
+  // baseRequestClient返回完整的axios响应，我们需要提取data部分（blob）
+  return response.data;
 }
