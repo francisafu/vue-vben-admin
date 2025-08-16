@@ -154,10 +154,18 @@ const columns: ColumnsType = [
     width: 250,
     ellipsis: true,
     customRender: ({ record }) => {
-      return h('div', [
-        h('div', { class: 'font-medium' }, record.spuNameCn),
-        record.skuShortDesc && h('div', { class: 'text-xs text-gray-500' }, record.skuShortDesc)
-      ]);
+      return h(Tooltip, { title: `点击复制: ${record.spuNameCn}` }, () =>
+        h('div', {
+          class: 'cursor-pointer hover:text-blue-500',
+          onClick: () => {
+            navigator.clipboard.writeText(record.spuNameCn);
+            message.success('商品名称已复制');
+          }
+        }, [
+          h('div', { class: 'font-medium' }, record.spuNameCn),
+          record.skuShortDesc && h('div', { class: 'text-xs text-gray-500' }, record.skuShortDesc)
+        ])
+      );
     }
   },
   {
@@ -172,8 +180,7 @@ const columns: ColumnsType = [
     dataIndex: 'skuInvNum',
     key: 'skuInvNum',
     width: 120,
-    align: 'center',
-    sorter: (a: any, b: any) => a.skuInvNum - b.skuInvNum
+    align: 'center'
   },
   {
     title: '销售价格',
@@ -181,7 +188,6 @@ const columns: ColumnsType = [
     key: 'skuSalePrice',
     width: 120,
     align: 'center',
-    sorter: (a: any, b: any) => a.skuSalePrice - b.skuSalePrice,
     customRender: ({ text }) => {
       const price = (text / 100).toFixed(2);
       return `¥${price}`;
@@ -193,47 +199,11 @@ const columns: ColumnsType = [
     key: 'isVbPackage',
     width: 100,
     align: 'center',
-    filters: [
-      { text: '礼包', value: true },
-      { text: '单品', value: false }
-    ],
-    onFilter: (value: any, record: any) => record.isVbPackage === value,
     customRender: ({ record }) => {
       if (record.isVbPackage) {
         return h(Tag, { color: 'green' }, () => '礼包');
       }
       return h(Tag, { color: 'default' }, () => '单品');
-    }
-  },
-  {
-    title: '操作',
-    key: 'action',
-    width: 180,
-    fixed: 'right',
-    customRender: ({ record }) => {
-      return h('div', { class: 'flex gap-2' }, [
-        h(Button, {
-          type: 'link',
-          size: 'small',
-          onClick: () => {
-            navigator.clipboard.writeText(record.skuCode);
-            message.success('标识符已复制');
-          }
-        }, () => '复制标识符'),
-        h(Button, {
-          type: 'link',
-          size: 'small',
-          onClick: () => {
-            const orderJson = JSON.stringify({
-              skuId: record.skuId,
-              skuCode: record.skuCode,
-              quantity: 1
-            });
-            navigator.clipboard.writeText(orderJson);
-            message.success('下单JSON已复制');
-          }
-        }, () => '复制JSON')
-      ]);
     }
   }
 ];
@@ -518,7 +488,7 @@ onMounted(() => {
         :loading="loading"
         :pagination="pagination"
         @change="handleTableChange"
-        :scroll="{ x: 1500 }"
+        :scroll="{ x: 1100 }"
         rowKey="skuId"
       />
       

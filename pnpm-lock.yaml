@@ -840,6 +840,9 @@ importers:
       vue-router:
         specifier: 'catalog:'
         version: 4.5.1(vue@3.5.13(typescript@5.8.3))
+      watermark-js-plus:
+        specifier: 'catalog:'
+        version: 1.6.0
 
   apps/web-naive:
     dependencies:

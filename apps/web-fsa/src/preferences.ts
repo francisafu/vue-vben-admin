@@ -16,6 +16,7 @@ export const overridesPreferences = defineOverridesPreferences({
     enablePreferences: false,
     defaultHomePath: '/home/account',
     locale: 'zh-CN',
+    watermark: false,  // 关闭普通水印，我们使用暗水印
   },
   copyright: {
     enable: false,
