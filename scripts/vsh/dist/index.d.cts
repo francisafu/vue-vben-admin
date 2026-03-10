@@ -1,2 +1,2 @@
-export * from "C:/Users/franc/Repo/framilysales_assistant_v5/frontend/scripts/vsh/src/index.js";
-export { default } from "C:/Users/franc/Repo/framilysales_assistant_v5/frontend/scripts/vsh/src/index.js";
+export * from "/home/francis/repo/framilysales_assistant_v5/frontend/scripts/vsh/src/index.js";
+export { default } from "/home/francis/repo/framilysales_assistant_v5/frontend/scripts/vsh/src/index.js";

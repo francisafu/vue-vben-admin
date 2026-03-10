@@ -3,7 +3,7 @@ import { createJiti } from "../../../../../../node_modules/.pnpm/jiti@2.4.2/node
 const jiti = createJiti(import.meta.url, {
   "interopDefault": true,
   "alias": {
-    "@vben-core/shared": "C:/Users/franc/Repo/framilysales_assistant_v5/frontend/packages/@core/base/shared"
+    "@vben-core/shared": "/home/francis/repo/framilysales_assistant_v5/frontend/packages/@core/base/shared"
   },
   "transformOptions": {
     "babel": {
@@ -12,7 +12,7 @@ const jiti = createJiti(import.meta.url, {
   }
 })
 
-/** @type {import("C:/Users/franc/Repo/framilysales_assistant_v5/frontend/packages/@core/base/shared/src/cache/index.js")} */
-const _module = await jiti.import("C:/Users/franc/Repo/framilysales_assistant_v5/frontend/packages/@core/base/shared/src/cache/index.ts");
+/** @type {import("/home/francis/repo/framilysales_assistant_v5/frontend/packages/@core/base/shared/src/cache/index.js")} */
+const _module = await jiti.import("/home/francis/repo/framilysales_assistant_v5/frontend/packages/@core/base/shared/src/cache/index.ts");
 
 export const StorageManager = _module.StorageManager;

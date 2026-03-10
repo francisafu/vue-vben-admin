@@ -3,7 +3,7 @@ import { createJiti } from "../../../node_modules/.pnpm/jiti@2.4.2/node_modules/
 const jiti = createJiti(import.meta.url, {
   "interopDefault": true,
   "alias": {
-    "@vben/node-utils": "C:/Users/franc/Repo/framilysales_assistant_v5/frontend/internal/node-utils"
+    "@vben/node-utils": "/home/francis/repo/framilysales_assistant_v5/frontend/internal/node-utils"
   },
   "transformOptions": {
     "babel": {
@@ -12,8 +12,8 @@ const jiti = createJiti(import.meta.url, {
   }
 })
 
-/** @type {import("C:/Users/franc/Repo/framilysales_assistant_v5/frontend/internal/node-utils/src/index.js")} */
-const _module = await jiti.import("C:/Users/franc/Repo/framilysales_assistant_v5/frontend/internal/node-utils/src/index.ts");
+/** @type {import("/home/francis/repo/framilysales_assistant_v5/frontend/internal/node-utils/src/index.js")} */
+const _module = await jiti.import("/home/francis/repo/framilysales_assistant_v5/frontend/internal/node-utils/src/index.ts");
 
 export const getStagedFiles = _module.getStagedFiles;
 export const gitAdd = _module.gitAdd;
