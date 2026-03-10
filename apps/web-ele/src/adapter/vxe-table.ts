@@ -1,3 +1,5 @@
+import type { VxeTableGridOptions } from '@vben/plugins/vxe-table';
+
 import { h } from 'vue';
 
 import { setupVbenVxeTable, useVbenVxeGrid } from '@vben/plugins/vxe-table';
@@ -33,15 +35,16 @@ setupVbenVxeTable({
         round: true,
         showOverflow: true,
         size: 'small',
-      },
+      } as VxeTableGridOptions,
     });
 
     // 表格配置项可以用 cellRender: { name: 'CellImage' },
     vxeUI.renderer.add('CellImage', {
-      renderTableDefault(_renderOpts, params) {
+      renderTableDefault(renderOpts, params) {
+        const { props } = renderOpts;
         const { column, row } = params;
         const src = row[column.field];
-        return h(ElImage, { src, previewSrcList: [src] });
+        return h(ElImage, { src, previewSrcList: [src], ...props });
       },
     });
 

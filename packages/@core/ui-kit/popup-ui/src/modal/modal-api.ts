@@ -59,27 +59,22 @@ export class ModalApi {
       showCancelButton: true,
       showConfirmButton: true,
       title: '',
+      animationType: 'slide',
     };
 
-    this.store = new Store<ModalState>(
-      {
-        ...defaultState,
-        ...storeState,
-      },
-      {
-        onUpdate: () => {
-          const state = this.store.state;
+    this.store = new Store<ModalState>({
+      ...defaultState,
+      ...storeState,
+    });
 
-          // 每次更新状态时，都会调用 onOpenChange 回调函数
-          if (state?.isOpen === this.state?.isOpen) {
-            this.state = state;
-          } else {
-            this.state = state;
-            this.api.onOpenChange?.(!!state?.isOpen);
-          }
-        },
-      },
-    );
+    this.store.subscribe((state) => {
+      // 每次更新状态时，都会调用 onOpenChange 回调函数
+      const prevIsOpen = this.state?.isOpen;
+      this.state = state;
+      if (state?.isOpen !== prevIsOpen) {
+        this.api.onOpenChange?.(!!state?.isOpen);
+      }
+    });
 
     this.state = this.store.state;
 
@@ -106,7 +101,6 @@ export class ModalApi {
       this.store.setState((prev) => ({
         ...prev,
         isOpen: false,
-        submitting: false,
       }));
     }
   }
@@ -161,7 +155,11 @@ export class ModalApi {
   }
 
   open() {
-    this.store.setState((prev) => ({ ...prev, isOpen: true }));
+    this.store.setState((prev) => ({
+      ...prev,
+      isOpen: true,
+      submitting: false,
+    }));
   }
 
   setData<T>(payload: T) {

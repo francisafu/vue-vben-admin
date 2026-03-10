@@ -71,7 +71,6 @@ const modelValue = defineModel({ default: '', type: String });
 
 const visible = ref(false);
 const currentSelect = ref('');
-const currentPage = ref(1);
 const keyword = ref('');
 const keywordDebounce = refDebounced(keyword, 300);
 const innerIcons = ref<string[]>([]);
@@ -116,7 +115,7 @@ const showList = computed(() => {
   );
 });
 
-const { paginationList, total, setCurrentPage } = usePagination(
+const { paginationList, total, setCurrentPage, currentPage } = usePagination(
   showList,
   props.pageSize,
 );
@@ -139,7 +138,6 @@ const handleClick = (icon: string) => {
 };
 
 const handlePageChange = (page: number) => {
-  currentPage.value = page;
   setCurrentPage(page);
 };
 
@@ -221,7 +219,7 @@ defineExpose({ toggleOpenState, open, close });
           />
           <VbenIcon
             :icon="currentSelect || Grip"
-            class="absolute right-1 top-1 size-6"
+            class="absolute top-1 right-1 size-6"
             aria-hidden="true"
           />
         </div>
@@ -311,7 +309,7 @@ defineExpose({ toggleOpenState, open, close });
     </template>
 
     <template v-else>
-      <div class="flex-col-center text-muted-foreground min-h-[150px] w-full">
+      <div class="flex-col-center min-h-[150px] w-full text-muted-foreground">
         <EmptyIcon class="size-10" />
         <div class="mt-1 text-sm">{{ $t('common.noData') }}</div>
       </div>

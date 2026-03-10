@@ -9,6 +9,10 @@
       "path": "apps/web-antd",
     },
     {
+      "name": "@vben/web-antdv-next",
+      "path": "apps/web-antdv-next",
+    },
+    {
       "name": "@vben/web-ele",
       "path": "apps/web-ele",
     },
@@ -19,6 +23,10 @@
     {
       "name": "@vben/web-naive",
       "path": "apps/web-naive",
+    },
+    {
+      "name": "@vben/web-tdesign",
+      "path": "apps/web-tdesign",
     },
     {
       "name": "@vben/docs",
@@ -43,10 +51,6 @@
     {
       "name": "@vben/node-utils",
       "path": "internal/node-utils",
-    },
-    {
-      "name": "@vben/tailwind-config",
-      "path": "internal/tailwind-config",
     },
     {
       "name": "@vben/tsconfig",

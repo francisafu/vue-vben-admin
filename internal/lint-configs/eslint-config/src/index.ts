@@ -11,13 +11,16 @@ import {
   jsonc,
   node,
   perfectionist,
+  pnpm,
   prettier,
   regexp,
+  tailwindcss,
   test,
   turbo,
   typescript,
   unicorn,
   vue,
+  yaml,
 } from './configs';
 import { customConfig } from './custom-config';
 
@@ -43,11 +46,14 @@ async function defineConfig(config: FlatConfig[] = []) {
     perfectionist(),
     comments(),
     jsdoc(),
+    tailwindcss(),
     unicorn(),
     test(),
     regexp(),
     command(),
     turbo(),
+    yaml(),
+    pnpm(),
     ...customConfig,
     ...config,
   ];

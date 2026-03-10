@@ -340,6 +340,10 @@ interface RouteMeta {
     | 'warning'
     | string;
   /**
+   * 路由的完整路径作为key（默认true）
+   */
+  fullPathKey?: boolean;
+  /**
    * 当前路由的子级在菜单中不展现
    * @default false
    */
@@ -502,6 +506,13 @@ interface RouteMeta {
 
 用于配置页面的徽标颜色。
 
+### fullPathKey
+
+- 类型：`boolean`
+- 默认值：`true`
+
+是否将路由的完整路径作为tab key（默认true）
+
 ### activePath
 
 - 类型：`string`
@@ -588,6 +599,13 @@ _注意:_ 排序仅针对一级菜单有效，二级菜单的排序需要在对�
 
 用于配置当前路由不使用基础布局，仅在顶级时生效。默认情况下，所有的路由都会被包裹在基础布局中（包含顶部以及侧边等导航部件），如果你的页面不需要这些部件，可以设置 `noBasicLayout` 为 `true`。
 
+### domCached
+
+- 类型：`boolean`
+- 默认值：`false`
+
+用于配置当前路由是否要将route对应dom元素缓存起来。对于一些复杂页面切换tab浏览器回流/重绘会导致卡顿， `domCached` 设为 `true`可解决该问题，但是也有代价：1、内存占用升高 2、vue的部分生命周期不会触发
+
 ## 路由刷新
 
 路由刷新方式如下：
@@ -602,3 +620,32 @@ const { refresh } = useRefresh();
 refresh();
 </script>
 ```
+
+## 标签页与路由控制
+
+在某些场景下，需要单个路由打开多个标签页，或者修改路由的query不打开新的标签页
+
+每个标签页Tab使用唯一的key标识，设置Tab key有三种方式，优先级由高到低：
+
+- 使用路由query参数pageKey
+
+```vue
+<script setup lang="ts">
+import { useRouter } from 'vue-router';
+// 跳转路由
+const router = useRouter();
+router.push({
+  path: 'path',
+  query: {
+    pageKey: 'key',
+  },
+});
+```
+
+- 路由的完整路径作为key
+
+`meta` 属性中的 `fullPathKey`不为false，则使用路由`fullPath`作为key
+
+- 路由的path作为key
+
+`meta` 属性中的 `fullPathKey`为false，则使用路由`path`作为key

@@ -44,7 +44,7 @@ const [Grid, gridApi] = useVbenVxeGrid({
     toolbarConfig: {
       custom: true,
       export: false,
-      refresh: { code: 'query' },
+      refresh: true,
       zoom: true,
     },
     treeConfig: {
@@ -122,7 +122,7 @@ function onDelete(row: SystemMenuApi.SystemMenu) {
       </template>
       <template #title="{ row }">
         <div class="flex w-full items-center gap-1">
-          <div class="size-5 flex-shrink-0">
+          <div class="size-5 shrink-0">
             <IconifyIcon
               v-if="row.type === 'button'"
               icon="carbon:security"
