@@ -1,4 +1,4 @@
-import { createJiti } from "../../../node_modules/.pnpm/jiti@2.4.2/node_modules/jiti/lib/jiti.mjs";
+import { createJiti } from "../../../node_modules/.pnpm/jiti@2.6.1/node_modules/jiti/lib/jiti.mjs";
 
 const jiti = createJiti(import.meta.url, {
   "interopDefault": true,
@@ -55,8 +55,6 @@ export const execaCommand = _module.execaCommand;
 export const execaCommandSync = _module.execaCommandSync;
 export const execaNode = _module.execaNode;
 export const $ = _module.$;
-export const deepScriptOptions = _module.deepScriptOptions;
-export const setScriptSync = _module.setScriptSync;
 export const parseCommandString = _module.parseCommandString;
 export const ExecaError = _module.ExecaError;
 export const ExecaSyncError = _module.ExecaSyncError;
