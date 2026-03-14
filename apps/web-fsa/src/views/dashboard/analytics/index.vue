@@ -2,8 +2,9 @@
 import type { AnalysisOverviewItem } from '@vben/common-ui';
 import type { TabOption } from '@vben/types';
 
+import { ref } from 'vue';
+
 import {
-  AnalysisChartCard,
   AnalysisChartsTabs,
   AnalysisOverview,
 } from '@vben/common-ui';
@@ -15,11 +16,20 @@ import {
 } from '@vben/icons';
 import { $t } from '#/locales';
 
+import { Button, message, Upload } from 'ant-design-vue';
+
+import { exportBackupApi, importBackupApi } from '#/api';
+
 import AnalyticsTrends from './analytics-trends.vue';
-import AnalyticsVisitsData from './analytics-visits-data.vue';
-import AnalyticsVisitsSales from './analytics-visits-sales.vue';
-import AnalyticsVisitsSource from './analytics-visits-source.vue';
 import AnalyticsVisits from './analytics-visits.vue';
+
+declare const __VBEN_ADMIN_METADATA__: {
+  buildTime: string;
+  dependencies: Record<string, string>;
+};
+
+const { buildTime, dependencies = {} } = __VBEN_ADMIN_METADATA__ || {};
+const appVersion = dependencies['@vben/common-ui'] || '-';
 
 const overviewItems: AnalysisOverviewItem[] = [
   {
@@ -62,6 +72,41 @@ const chartTabs: TabOption[] = [
     value: 'visits',
   },
 ];
+
+const exporting = ref(false);
+const importing = ref(false);
+
+async function handleExport() {
+  exporting.value = true;
+  try {
+    const blob = await exportBackupApi();
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    const url = URL.createObjectURL(blob as Blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `fsa_backup_${timestamp}.sql`;
+    a.click();
+    URL.revokeObjectURL(url);
+    message.success('数据库备份已下载');
+  } catch {
+    message.error('导出失败');
+  } finally {
+    exporting.value = false;
+  }
+}
+
+async function handleImport(file: File) {
+  importing.value = true;
+  try {
+    await importBackupApi(file);
+    message.success('数据库恢复成功');
+  } catch {
+    message.error('导入失败');
+  } finally {
+    importing.value = false;
+  }
+  return false;
+}
 </script>
 
 <template>
@@ -76,16 +121,37 @@ const chartTabs: TabOption[] = [
       </template>
     </AnalysisChartsTabs>
 
-    <div class="mt-5 w-full md:flex">
-      <AnalysisChartCard class="mt-5 md:mr-4 md:mt-0 md:w-1/3" :title="$t('page.dashboard.analytics.visitsCount')">
-        <AnalyticsVisitsData />
-      </AnalysisChartCard>
-      <AnalysisChartCard class="mt-5 md:mr-4 md:mt-0 md:w-1/3" :title="$t('page.dashboard.analytics.visitsSource')">
-        <AnalyticsVisitsSource />
-      </AnalysisChartCard>
-      <AnalysisChartCard class="mt-5 md:mt-0 md:w-1/3" :title="$t('page.dashboard.analytics.visitsSource')">
-        <AnalyticsVisitsSales />
-      </AnalysisChartCard>
+    <div class="card-box mt-5 p-5">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-8">
+          <div>
+            <span class="text-sm text-foreground/60">版本号</span>
+            <p class="mt-1 text-sm font-medium text-foreground">{{ appVersion }}</p>
+          </div>
+          <div>
+            <span class="text-sm text-foreground/60">构建时间</span>
+            <p class="mt-1 text-sm font-medium text-foreground">{{ buildTime }}</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-3">
+          <Button
+            type="primary"
+            :loading="exporting"
+            @click="handleExport"
+          >
+            导出数据库
+          </Button>
+          <Upload
+            :before-upload="handleImport"
+            :show-upload-list="false"
+            accept=".sql"
+          >
+            <Button :loading="importing" danger>
+              导入数据库
+            </Button>
+          </Upload>
+        </div>
+      </div>
     </div>
   </div>
 </template>

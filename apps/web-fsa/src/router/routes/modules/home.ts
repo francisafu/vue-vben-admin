@@ -71,16 +71,6 @@ const routes: RouteRecordRaw[] = [
         },
       },
       {
-        name: 'LorealOfficial',
-        path: '/home/loreal-official',
-        component: IFrameView,
-        meta: {
-          icon: 'mdi:lipstick',
-          link: 'https://www.loreal-boutique.com/',
-          title: $t('page.home.lorealOfficial'),
-        },
-      },
-      {
         name: 'EsteeOfficial',
         path: '/home/estee-official',
         component: IFrameView,
@@ -108,16 +98,6 @@ const routes: RouteRecordRaw[] = [
           authority: ['ADMIN'],
           icon: 'lucide:area-chart',
           title: $t('page.home.analytics'),
-        },
-      },
-      {
-        name: 'About',
-        path: '/home/about',
-        component: () => import('#/views/_core/about/index.vue'),
-        meta: {
-          authority: ['ADMIN'],
-          icon: 'lucide:copyright',
-          title: $t('page.home.about'),
         },
       },
     ],

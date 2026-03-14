@@ -41,5 +41,6 @@ export const overridesPreferences = defineOverridesPreferences({
     languageToggle: false,
     lockScreen: false,
     notification: false,
+    timezone: false,
   },
 });
