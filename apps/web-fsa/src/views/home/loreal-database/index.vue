@@ -22,7 +22,6 @@ import { $t } from '#/locales';
 import {
   getLorealDatabaseByActivity,
   deleteLorealDatabase,
-  getHotSaleData,
   getActivityList
 } from '#/api/core/lorealDatabase';
 
@@ -50,9 +49,6 @@ const currentDatabase = ref<any>(null);
 const activityOptions = ref<any[]>([]);
 const loadingActivities = ref(false);
 
-// 热卖活动下载中
-const downloadingHotSale = ref(false);
-
 // 所有产品数据（用于搜索）
 const allProducts = ref<any[]>([]);
 
@@ -63,10 +59,10 @@ const filteredProducts = computed(() => {
   const keyword = searchKeyword.value.toLowerCase();
   return allProducts.value.filter(product => {
     return (
-      product.skuCode?.toLowerCase().includes(keyword) ||
-      product.spuNameCn?.toLowerCase().includes(keyword) ||
-      product.skuSpecName?.toLowerCase().includes(keyword) ||
-      product.skuShortDesc?.toLowerCase().includes(keyword)
+      product.item_bn?.toLowerCase().includes(keyword) ||
+      product.item_name?.toLowerCase().includes(keyword) ||
+      product.item_spec?.toLowerCase().includes(keyword) ||
+      product.tags?.toLowerCase().includes(keyword)
     );
   });
 });
@@ -108,13 +104,14 @@ const [DatabaseModal, databaseModalApi] = useVbenModal({
 const columns: ColumnsType = [
   {
     title: '商品图片',
-    dataIndex: 'spuImage',
-    key: 'spuImage',
+    dataIndex: 'pics',
+    key: 'pics',
     width: 100,
     fixed: 'left',
     customRender: ({ record }) => {
+      const src = Array.isArray(record.pics) && record.pics.length > 0 ? record.pics[0] : '';
       return h(Image, {
-        src: record.spuImage,
+        src,
         width: 60,
         height: 60,
         fallback: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==',
@@ -124,83 +121,88 @@ const columns: ColumnsType = [
   },
   {
     title: '标识符',
-    dataIndex: 'skuCode',
-    key: 'skuCode',
+    dataIndex: 'item_bn',
+    key: 'item_bn',
     width: 120,
     fixed: 'left',
     customRender: ({ record }) => {
-      return h(Tooltip, { title: `点击复制: ${record.skuCode}` }, () =>
+      return h(Tooltip, { title: `点击复制: ${record.item_bn}` }, () =>
         h('span', { 
           class: 'cursor-pointer hover:text-blue-500',
           onClick: () => {
-            navigator.clipboard.writeText(record.skuCode);
+            navigator.clipboard.writeText(record.item_bn);
             message.success('标识符已复制');
           }
-        }, record.skuCode)
+        }, record.item_bn)
       );
     }
   },
   {
     title: '商品ID',
-    dataIndex: 'skuId',
-    key: 'skuId',
+    dataIndex: 'item_id',
+    key: 'item_id',
     width: 100,
     align: 'center'
   },
   {
     title: '商品名称',
-    dataIndex: 'spuNameCn',
-    key: 'spuNameCn',
+    dataIndex: 'item_name',
+    key: 'item_name',
     width: 250,
     ellipsis: true,
     customRender: ({ record }) => {
-      return h(Tooltip, { title: `点击复制: ${record.spuNameCn}` }, () =>
+      return h(Tooltip, { title: `点击复制: ${record.item_name}` }, () =>
         h('div', {
           class: 'cursor-pointer hover:text-blue-500',
           onClick: () => {
-            navigator.clipboard.writeText(record.spuNameCn);
+            navigator.clipboard.writeText(record.item_name);
             message.success('商品名称已复制');
           }
         }, [
-          h('div', { class: 'font-medium' }, record.spuNameCn),
-          record.skuShortDesc && h('div', { class: 'text-xs text-gray-500' }, record.skuShortDesc)
+          h('div', { class: 'font-medium' }, record.item_name)
         ])
       );
     }
   },
   {
     title: '规格',
-    dataIndex: 'skuSpecName',
-    key: 'skuSpecName',
-    width: 100,
+    dataIndex: 'item_spec',
+    key: 'item_spec',
+    width: 120,
     align: 'center'
   },
   {
-    title: '库存数量',
-    dataIndex: 'skuInvNum',
-    key: 'skuInvNum',
-    width: 120,
+    title: '库存',
+    dataIndex: 'store',
+    key: 'store',
+    width: 100,
     align: 'center'
   },
   {
     title: '销售价格',
-    dataIndex: 'skuSalePrice',
-    key: 'skuSalePrice',
+    dataIndex: 'price',
+    key: 'price',
     width: 120,
     align: 'center',
     customRender: ({ text }) => {
-      const price = (text / 100).toFixed(2);
-      return `¥${price}`;
+      return `¥${Number(text).toFixed(2)}`;
     }
   },
   {
-    title: '是否礼包',
-    dataIndex: 'isVbPackage',
-    key: 'isVbPackage',
+    title: '有效期',
+    dataIndex: 'expiry_desc',
+    key: 'expiry_desc',
     width: 100,
+    align: 'center'
+  },
+  {
+    title: '类型',
+    dataIndex: 'item_type',
+    key: 'item_type',
+    width: 80,
     align: 'center',
     customRender: ({ record }) => {
-      if (record.isVbPackage) {
+      if (record.item_type === 'combo') {
         return h(Tag, { color: 'green' }, () => '礼包');
       }
       return h(Tag, { color: 'default' }, () => '单品');
@@ -212,16 +214,11 @@ const columns: ColumnsType = [
 async function fetchActivityList() {
   try {
     loadingActivities.value = true;
-    // 使用专门的欧莱雅活动接口
     const response = await getActivityList({});
     
-    console.log('欧莱雅活动列表响应:', response);
-    
-    // 处理响应数据
     const list = response?.list || [];
     
     if (Array.isArray(list) && list.length > 0) {
-      // 活动已经按照开始时间倒序排序（后端已处理）
       activityOptions.value = list.map((item: any) => ({
         label: `活动${item.id} - ${dayjs(item.startTime).format('YYYY-MM-DD')} ~ ${dayjs(item.endTime).format('YYYY-MM-DD')}`,
         value: item.id,
@@ -229,7 +226,6 @@ async function fetchActivityList() {
         endTime: item.endTime
       }));
       
-      // 默认选择最新的活动
       if (activityOptions.value.length > 0 && !selectedActivityId.value) {
         selectedActivityId.value = activityOptions.value[0].value;
       }
@@ -240,7 +236,6 @@ async function fetchActivityList() {
       activityOptions.value = [];
     }
   } catch (error: any) {
-    console.error('获取欧莱雅活动列表失败:', error);
     message.error(`获取活动列表失败: ${error?.message || '未知错误'}`);
     activityOptions.value = [];
   } finally {
@@ -252,29 +247,21 @@ async function fetchActivityList() {
 async function fetchProductsByActivity(activityId: number) {
   try {
     loading.value = true;
-    console.log('正在获取活动数据，活动ID:', activityId);
     
     const response = await getLorealDatabaseByActivity({ activityId });
-    console.log('获取活动数据响应:', response);
-    
-    // 处理响应数据 - response 已经是 data 部分了（requestClient 配置了 responseReturn: 'data'）
     const data = response;
     
     if (data && data.id) {
       currentDatabase.value = data;
-      // 确保 products 是数组
       const products = Array.isArray(data.products) ? data.products : 
                       (data.products ? JSON.parse(data.products) : []);
       allProducts.value = products;
       productList.value = paginatedProducts.value;
       
-      // 显示数据统计
       if (allProducts.value.length > 0) {
         const totalProducts = allProducts.value.length;
-        const totalStock = allProducts.value.reduce((sum: number, p: any) => sum + (p.skuInvNum || 0), 0);
-        const avgPrice = (allProducts.value.reduce((sum: number, p: any) => sum + (p.skuSalePrice || 0), 0) / totalProducts / 100).toFixed(2);
-        
-        message.success(`成功加载 ${totalProducts} 个商品，总库存 ${totalStock}，平均价格 ¥${avgPrice}`);
+        const totalStock = allProducts.value.reduce((sum: number, p: any) => sum + (p.store || 0), 0);
+        message.success(`成功加载 ${totalProducts} 个商品，总库存 ${totalStock}`);
       } else {
         message.warning('该活动数据库存在但暂无商品数据');
       }
@@ -285,9 +272,6 @@ async function fetchProductsByActivity(activityId: number) {
       message.info('该活动尚未爬取商品数据，请先爬取');
     }
   } catch (error: any) {
-    console.error('获取产品数据失败:', error);
-    
-    // 根据错误类型显示不同的消息
     if (error?.response?.status === 404) {
       message.info('该活动尚未爬取商品数据，请先爬取');
     } else {
@@ -350,37 +334,6 @@ function handleUpdate() {
 }
 
 
-
-// 下载赠品表数据
-async function handleDownloadHotSale() {
-  try {
-    downloadingHotSale.value = true;
-    const response = await getHotSaleData();
-    
-    // 创建 Blob 对象
-    const blob = new Blob([response], { type: 'text/plain;charset=utf-8' });
-    
-    // 创建下载链接
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `赠品表_${dayjs().format('YYYY-MM-DD_HHmmss')}.txt`;
-    
-    // 触发下载
-    document.body.appendChild(link);
-    link.click();
-    
-    // 清理
-    document.body.removeChild(link);
-    window.URL.revokeObjectURL(url);
-    
-    message.success('下载成功');
-  } catch (error) {
-    message.error('下载失败');
-  } finally {
-    downloadingHotSale.value = false;
-  }
-}
 
 // 删除数据库记录
 async function handleDeleteDatabase() {
@@ -461,13 +414,6 @@ onMounted(() => {
           >
             删除数据
           </Button>
-          <Button 
-            type="default" 
-            @click="handleDownloadHotSale"
-            :loading="downloadingHotSale"
-          >
-            下载赠品表
-          </Button>
         </div>
         
         <!-- 数据统计信息 -->
@@ -475,7 +421,7 @@ onMounted(() => {
           <Space>
             <span>爬取时间: {{ dayjs(currentDatabase.scrapedAt).format('YYYY-MM-DD HH:mm:ss') }}</span>
             <span>商品总数: {{ allProducts.length }}</span>
-            <span>总库存: {{ allProducts.reduce((sum, p) => sum + p.skuInvNum, 0) }}</span>
+            <span>总库存: {{ allProducts.reduce((sum, p) => sum + (p.store || 0), 0) }}</span>
           </Space>
         </div>
       </div>
@@ -488,8 +434,8 @@ onMounted(() => {
         :loading="loading"
         :pagination="pagination"
         @change="handleTableChange"
-        :scroll="{ x: 1100 }"
-        rowKey="skuId"
+        :scroll="{ x: 1200 }"
+        rowKey="item_id"
       />
       
       <!-- 空状态 -->

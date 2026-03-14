@@ -70,6 +70,7 @@ const routes: RouteRecordRaw[] = [
           title: $t('page.home.lorealDatabase'),
         },
       },
+
       {
         name: 'EsteeOfficial',
         path: '/home/estee-official',

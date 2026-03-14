@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { ActivityApi, AccountInfoApi } from '#/api/core';
+import type { ActivityApi, AccountInfoApi, WxappLorealApi } from '#/api/core';
 
 import { onMounted, onUnmounted, ref, computed, h } from 'vue';
 
@@ -12,9 +12,10 @@ import { Eye, EyeOff } from '@vben/icons';
 import { $t } from '#/locales';
 import { getUserActivitiesApi } from '#/api/core/activity';
 import { listAccountInfosApi, deleteAccountInfoApi } from '#/api/core/account-info';
+import { getAllTokenStatusApi } from '#/api/core/wxapp-loreal';
 import { deleteTaskApi, copyTaskApi, startTaskApi, cancelTaskApi, exportOrdersApi } from '#/api/core/task';
 import dayjs from 'dayjs';
-import { useSocket, SocketStatus } from '#/composables/useSocket';
+import { useSocket, SocketStatus, getSocketInstance } from '#/composables/useSocket';
 import type { TaskStatusUpdate } from '#/composables/useSocket';
 
 import AccountInfoModal from './account-info-modal.vue';
@@ -39,11 +40,16 @@ const currentTime = ref(dayjs().format('YYYY-MM-DD HH:mm:ss'));
 // 显示/隐藏状态
 const showAccount = ref(true);
 const showPassword = ref(true);
-const showAddress = ref(true);
 
 // 任务相关状态
 const accountTasksMap = ref<Record<number, AccountInfoApi.TaskInfo[]>>({});
 const accountTasksLoadingMap = ref<Record<number, boolean>>({});
+
+// Token 状态（仅 LOREAL 活动）
+const tokenMap = ref<Record<number, WxappLorealApi.TokenStatusItem>>({});
+const countdownMap = ref<Record<number, number>>({});
+let tokenRefreshTimer: ReturnType<typeof setInterval> | null = null;
+let countdownTimer: ReturnType<typeof setInterval> | null = null;
 
 // Socket连接
 const { subscribeUserTasks, connectionStatus } = useSocket();
@@ -133,6 +139,9 @@ const brandMap: Record<string, string> = {
   'LOCCITANE': $t('page.activity.brandLOCCITANE')
 };
 
+// 当前活动是否为欧莱雅
+const isLoreal = computed(() => selectedActivity.value?.brand === 'LOREAL');
+
 // 生成活动选项
 const activityOptions = computed(() => {
   return userActivities.value.map(activity => {
@@ -178,11 +187,6 @@ function togglePasswordVisibility() {
   showPassword.value = !showPassword.value;
 }
 
-// 切换地址显示状态
-function toggleAddressVisibility() {
-  showAddress.value = !showAddress.value;
-}
-
 // 格式化账号显示
 function formatAccount(account: string) {
   if (showAccount.value) {
@@ -199,103 +203,108 @@ function formatPassword(password: string) {
   return '*'.repeat(password.length);
 }
 
-// 格式化地址显示
-function formatAddress(address: any) {
-  if (!address) return '';
-  
-  const fullAddress = `${address.userName || ''} ${address.mobilePhone || ''} ${address.provinceName || ''}${address.cityName || ''}${address.districtName || ''}${address.addrDetail || ''}`;
-  
-  if (showAddress.value) {
-    return fullAddress;
-  }
-  return '*'.repeat(fullAddress.length);
+// Token 色块颜色计算
+function getTokenDotColor(accountId: number): string {
+  const token = tokenMap.value[accountId];
+  if (!token || !token.hasToken) return '#d9d9d9'; // 灰色
+  if (!token.isValid) return '#ff4d4f'; // 红色
+  const seconds = countdownMap.value[accountId] || 0;
+  if (seconds < 5 * 60) return '#faad14'; // 橙色 < 5分钟
+  return '#52c41a'; // 绿色
 }
 
-// 表格列定义
-const columns: ColumnsType = [
-  {
-    title: $t('page.common.seqNo'),
-    key: 'seq',
-    width: 80,
-    customRender: ({ index }: { index: number }) => {
-      return index + 1;
-    }
-  },
-  {
-    title: () => {
-      return h('div', { style: 'display: flex; align-items: center; justify-content: space-between;' }, [
-        h('span', $t('page.accountInfo.account')),
-        h(Button, {
-          type: 'text',
-          size: 'small',
-          onClick: toggleAccountVisibility,
-          style: 'padding: 0; min-width: auto; height: auto;'
-        }, {
-          icon: () => showAccount.value ? h(Eye) : h(EyeOff)
-        })
-      ]);
+// Token Tooltip 文本
+function getTokenTooltip(accountId: number): string {
+  const token = tokenMap.value[accountId];
+  if (!token || !token.hasToken) return $t('page.accountInfo.tokenNoToken');
+  if (!token.isValid) return $t('page.accountInfo.tokenExpired');
+  const seconds = countdownMap.value[accountId] || 0;
+  if (seconds <= 0) return $t('page.accountInfo.tokenExpired');
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return $t('page.accountInfo.tokenRemaining', { time: `${m}m ${s}s` });
+}
+
+// 表格列定义（动态，根据品牌决定是否包含 Token 列）
+const columns = computed<ColumnsType>(() => {
+  const base: ColumnsType = [
+    {
+      title: $t('page.common.seqNo'),
+      key: 'seq',
+      width: 80,
+      customRender: ({ index }: { index: number }) => {
+        return index + 1;
+      }
     },
-    key: 'account',
-    width: 120,
-    customRender: ({ record }: { record: AccountInfoApi.AccountInfoItem }) => {
-      return formatAccount(record.account);
-    }
-  },
-  {
-    title: () => {
-      return h('div', { style: 'display: flex; align-items: center; justify-content: space-between;' }, [
-        h('span', $t('page.accountInfo.password')),
-        h(Button, {
-          type: 'text',
-          size: 'small',
-          onClick: togglePasswordVisibility,
-          style: 'padding: 0; min-width: auto; height: auto;'
-        }, {
-          icon: () => showPassword.value ? h(Eye) : h(EyeOff)
-        })
-      ]);
+    {
+      title: () => {
+        return h('div', { style: 'display: flex; align-items: center; justify-content: space-between;' }, [
+          h('span', $t('page.accountInfo.account')),
+          h(Button, {
+            type: 'text',
+            size: 'small',
+            onClick: toggleAccountVisibility,
+            style: 'padding: 0; min-width: auto; height: auto;'
+          }, {
+            icon: () => showAccount.value ? h(Eye) : h(EyeOff)
+          })
+        ]);
+      },
+      key: 'account',
+      width: 120,
+      customRender: ({ record }: { record: AccountInfoApi.AccountInfoItem }) => {
+        return formatAccount(record.account);
+      }
     },
-    key: 'password',
-    width: 120,
-    customRender: ({ record }: { record: AccountInfoApi.AccountInfoItem }) => {
-      return formatPassword(record.password);
-    }
-  },
-  {
-    title: () => {
-      return h('div', { style: 'display: flex; align-items: center; justify-content: space-between;' }, [
-        h('span', $t('page.accountInfo.address')),
-        h(Button, {
-          type: 'text',
-          size: 'small',
-          onClick: toggleAddressVisibility,
-          style: 'padding: 0; min-width: auto; height: auto;'
-        }, {
-          icon: () => showAddress.value ? h(Eye) : h(EyeOff)
-        })
-      ]);
+    {
+      title: () => {
+        return h('div', { style: 'display: flex; align-items: center; justify-content: space-between;' }, [
+          h('span', $t('page.accountInfo.password')),
+          h(Button, {
+            type: 'text',
+            size: 'small',
+            onClick: togglePasswordVisibility,
+            style: 'padding: 0; min-width: auto; height: auto;'
+          }, {
+            icon: () => showPassword.value ? h(Eye) : h(EyeOff)
+          })
+        ]);
+      },
+      key: 'password',
+      width: 120,
+      customRender: ({ record }: { record: AccountInfoApi.AccountInfoItem }) => {
+        return formatPassword(record.password);
+      }
     },
-    key: 'address',
-    width: 200,
-    customRender: ({ record }: { record: AccountInfoApi.AccountInfoItem }) => {
-      const addr = record.address;
-      if (!addr) return '';
-      return formatAddress(addr);
-    }
-  },
-  {
-    title: $t('page.accountInfo.taskCount'),
-    dataIndex: 'taskCount',
-    key: 'taskCount',
-    width: 100
-  },
-  {
-    title: $t('page.common.action'),
-    key: 'action',
-    width: 220,
-    fixed: 'right'
+  ];
+
+  // 仅欧莱雅活动显示 Token 列
+  if (isLoreal.value) {
+    base.push({
+      title: $t('page.accountInfo.tokenStatus'),
+      key: 'tokenStatus',
+      width: 60,
+      align: 'center',
+    });
   }
-];
+
+  base.push(
+    {
+      title: $t('page.accountInfo.taskCount'),
+      dataIndex: 'taskCount',
+      key: 'taskCount',
+      width: 100
+    },
+    {
+      title: $t('page.common.action'),
+      key: 'action',
+      width: 220,
+      fixed: 'right'
+    }
+  );
+
+  return base;
+});
 
 // 任务子表格列定义
 const taskColumns: ColumnsType = [
@@ -436,12 +445,71 @@ async function fetchAccountInfoList() {
   }
 }
 
+// 获取 Token 状态（仅 LOREAL）
+async function fetchTokenStatus() {
+  if (!isLoreal.value || !selectedActivityId.value) return;
+  try {
+    const data = await getAllTokenStatusApi();
+    if (data) {
+      const map: Record<number, WxappLorealApi.TokenStatusItem> = {};
+      const cdMap: Record<number, number> = {};
+      data
+        .filter(item => item.activityId === selectedActivityId.value)
+        .forEach(item => {
+          map[item.accountId] = item;
+          cdMap[item.accountId] = (item.hasToken && item.isValid && item.remainingMinutes > 0)
+            ? item.remainingMinutes * 60
+            : 0;
+        });
+      tokenMap.value = map;
+      countdownMap.value = cdMap;
+    }
+  } catch {
+    // 静默失败，不阻塞主流程
+  }
+}
+
+// 启动 Token 定时器
+function startTokenTimers() {
+  stopTokenTimers();
+  if (!isLoreal.value) return;
+
+  // 60秒刷新数据
+  tokenRefreshTimer = setInterval(() => {
+    fetchTokenStatus();
+  }, 60000);
+
+  // 1秒倒计时
+  countdownTimer = setInterval(() => {
+    for (const key in countdownMap.value) {
+      if (countdownMap.value[key] && countdownMap.value[key]! > 0) {
+        countdownMap.value[key]!--;
+      }
+    }
+  }, 1000);
+}
+
+// 停止 Token 定时器
+function stopTokenTimers() {
+  if (tokenRefreshTimer) { clearInterval(tokenRefreshTimer); tokenRefreshTimer = null; }
+  if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null; }
+}
+
 // 处理活动选择变化
 async function handleActivityChange(value: any) {
   const activityId = Number(value);
   if (!isNaN(activityId)) {
     selectedActivityId.value = activityId;
     await fetchAccountInfoList();
+    // Token 状态：获取数据 + 启动/停止定时器
+    tokenMap.value = {};
+    countdownMap.value = {};
+    if (isLoreal.value) {
+      await fetchTokenStatus();
+      startTokenTimers();
+    } else {
+      stopTokenTimers();
+    }
   }
 }
 
@@ -771,6 +839,22 @@ onMounted(async () => {
   
   // 每秒更新当前时间
   timeInterval = setInterval(updateCurrentTime, 1000);
+
+  // 如果默认选中的活动是欧莱雅，获取 Token 状态
+  if (isLoreal.value) {
+    await fetchTokenStatus();
+    startTokenTimers();
+  }
+
+  // 监听 MITM 登录成功事件，立即刷新 token 状态
+  const sock = getSocketInstance();
+  if (sock) {
+    sock.on('task:status-update', (data: any) => {
+      if (data?.type === 'wxapp:login:success' && isLoreal.value) {
+        fetchTokenStatus();
+      }
+    });
+  }
 });
 
 // 组件卸载时清理
@@ -782,6 +866,13 @@ onUnmounted(() => {
   // 清除定时器
   if (timeInterval) {
     clearInterval(timeInterval);
+  }
+  stopTokenTimers();
+
+  // 移除 socket 监听
+  const sock = getSocketInstance();
+  if (sock) {
+    sock.off('task:status-update');
   }
 });
 </script>
@@ -1040,6 +1131,20 @@ onUnmounted(() => {
             </template>
 
             <template #bodyCell="{ column, record }">
+              <template v-if="column.key === 'tokenStatus'">
+                <Tooltip :title="getTokenTooltip(record.id)">
+                  <div
+                    :style="{
+                      width: '12px',
+                      height: '12px',
+                      borderRadius: '50%',
+                      backgroundColor: getTokenDotColor(record.id),
+                      margin: '0 auto',
+                      cursor: 'pointer',
+                    }"
+                  />
+                </Tooltip>
+              </template>
               <template v-if="column.key === 'action'">
                 <Button 
                   type="link" 

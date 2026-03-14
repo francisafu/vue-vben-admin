@@ -14,17 +14,6 @@ export namespace AccountInfoApi {
     endTime: string;
   }
 
-  /** 地址信息 */
-  export interface AddressInfo {
-    id: number;
-    userName: string;
-    mobilePhone: string;
-    provinceName: string;
-    cityName: string;
-    districtName: string;
-    addrDetail: string;
-  }
-
   /** 任务信息 */
   export interface TaskInfo {
     id: number;
@@ -42,7 +31,6 @@ export namespace AccountInfoApi {
     id: number;
     account: string;
     password: string;
-    address: AddressInfo;
     taskCount: number;
     tasks: TaskInfo[];
   }
@@ -58,7 +46,6 @@ export namespace AccountInfoApi {
   /** 创建抢购账号参数 */
   export interface CreateAccountInfoParams {
     activityId: number;
-    addressId: number;
     account: string;
     password: string;
   }
@@ -69,12 +56,10 @@ export namespace AccountInfoApi {
     account: string;
     password: string;
     activity: ActivityInfo;
-    address: AddressInfo;
   }
 
   /** 更新抢购账号参数 */
   export interface UpdateAccountInfoParams {
-    addressId?: number;
     account?: string;
     password?: string;
   }
@@ -85,7 +70,6 @@ export namespace AccountInfoApi {
     account: string;
     password: string;
     activity: ActivityInfo;
-    address: AddressInfo;
   }
 }
 

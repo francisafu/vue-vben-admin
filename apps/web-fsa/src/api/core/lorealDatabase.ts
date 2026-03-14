@@ -12,8 +12,6 @@ export function getLorealDatabaseList(data: {
 // 创建欧莱雅数据库（爬取）
 export function createLorealDatabase(data: {
   activityId: number;
-  account: string;
-  password: string;
 }) {
   return requestClient.post('/lorealdb/create', data);
 }
@@ -31,26 +29,13 @@ export function getLorealDatabaseByActivity(data: {
 }
 
 // 更新欧莱雅数据库（重新爬取）
-export function updateLorealDatabase(
-  id: number,
-  data: {
-    account: string;
-    password: string;
-  }
-) {
-  return requestClient.post(`/lorealdb/${id}/update`, data);
+export function updateLorealDatabase(id: number) {
+  return requestClient.post(`/lorealdb/${id}/update`);
 }
 
 // 删除欧莱雅数据库
 export function deleteLorealDatabase(id: number) {
   return requestClient.post(`/lorealdb/${id}/delete`);
-}
-
-// 获取热卖活动数据
-export function getHotSaleData() {
-  return requestClient.post('/lorealdb/hotsale', {}, {
-    responseType: 'blob', // 返回文件流
-  });
 }
 
 // 获取活动列表（用于选择器）

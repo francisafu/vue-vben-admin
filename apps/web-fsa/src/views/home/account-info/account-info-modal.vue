@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { computed, ref, onMounted } from 'vue';
+import { computed, ref } from 'vue';
 
 import { useVbenModal } from '@vben/common-ui';
 import { useVbenForm } from '#/adapter/form';
@@ -8,7 +8,6 @@ import {
   createAccountInfoApi,
   updateAccountInfoApi
 } from '#/api/core/account-info';
-import { getUserInfoApi, getUserAddressesApi } from '#/api/core/user';
 import { message } from 'ant-design-vue';
 
 // 表单数据
@@ -18,9 +17,6 @@ const accountInfoData = computed(() => data.value?.accountInfoData);
 const activityId = computed(() => data.value?.activityId);
 const loading = ref(false);
 const submitting = ref(false);
-
-// 用户地址选项
-const addressOptions = ref<Array<{ label: string; value: number; disabled?: boolean }>>([]);
 
 // 表单配置
 const [AccountInfoForm, accountInfoFormApi] = useVbenForm({
@@ -60,16 +56,6 @@ const [AccountInfoForm, accountInfoFormApi] = useVbenForm({
       label: $t('page.accountInfo.password'),
       rules: 'required',
     },
-    {
-      component: 'Select',
-      componentProps: {
-        placeholder: $t('page.accountInfo.addressPlaceholder'),
-        options: addressOptions,
-      },
-      fieldName: 'addressId',
-      label: $t('page.accountInfo.address'),
-      rules: 'required',
-    },
   ],
 });
 
@@ -84,9 +70,6 @@ const [Modal, modalApi] = useVbenModal({
       // 获取传入的数据
       data.value = modalApi.getData<Record<string, any>>() || {};
 
-      // 加载用户地址
-      await fetchUserAddresses();
-
       // 重置表单
       (accountInfoFormApi as any).resetFields && (accountInfoFormApi as any).resetFields();
 
@@ -96,57 +79,17 @@ const [Modal, modalApi] = useVbenModal({
         accountInfoFormApi.setValues({
           account: accountInfo.account,
           password: accountInfo.password,
-          addressId: accountInfo.address?.id,
         });
       } else {
         // 新建模式
         accountInfoFormApi.setValues({
           account: '',
           password: '',
-          addressId: undefined
         });
       }
     }
   },
 });
-
-// 获取用户地址列表
-async function fetchUserAddresses() {
-  try {
-    loading.value = true;
-    const userInfo = await getUserInfoApi();
-    
-    // 后端返回的用户信息中，用户ID字段是id，不是userId
-    const userId = (userInfo as any).id;
-    
-    if (!userId || typeof userId !== 'number') {
-      throw new Error($t('page.accountInfo.invalidUserId'));
-    }
-    
-    // 获取用户地址列表
-    const addresses = await getUserAddressesApi(userId);
-    
-    // 格式化地址选项
-    addressOptions.value = addresses.map(address => ({
-      label: `${address.name} ${address.phone} ${address.fullAddress}`,
-      value: address.id
-    }));
-    
-    // 如果没有地址，显示提示
-    if (addresses.length === 0) {
-      addressOptions.value = [
-        { label: $t('page.accountInfo.addAddressInProfile'), value: 0, disabled: true }
-      ];
-    }
-  } catch (error) {
-    message.error($t('page.accountInfo.fetchUserAddressError'));
-    addressOptions.value = [
-      { label: $t('page.accountInfo.fetchAddressRetry'), value: 0, disabled: true }
-    ];
-  } finally {
-    loading.value = false;
-  }
-}
 
 // 处理表单提交
 async function handleSubmit(values: any) {
@@ -168,7 +111,6 @@ async function handleSubmit(values: any) {
       await updateAccountInfoApi(accountInfoData.value.id, {
         account: values.account,
         password: values.password,
-        addressId: values.addressId
       });
       message.success($t('page.accountInfo.updateAccountInfoSuccess'));
     } else {

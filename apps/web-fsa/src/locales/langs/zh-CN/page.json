@@ -10,7 +10,7 @@
     "loginTitle": "内购助手",
     "loginSubtitle": "仅供集团内部员工测试学习之用"
   },
-  "home":{
+  "home": {
     "title": "主页",
     "workspace": "工作面板",
     "accountManage": "个人中心",
@@ -27,9 +27,6 @@
     "title": "个人中心",
     "basicInfo": "基本资料",
     "modifyPassword": "修改密码",
-    "addressManagement": "地址管理",
-    "addAddress": "新增地址",
-    "editAddress": "编辑地址",
     "username": "用户名",
     "usernamePlaceholder": "请输入用户名",
     "phone": "手机号",
@@ -44,30 +41,11 @@
     "confirmPasswordPlaceholder": "请再次输入新密码",
     "confirmPasswordRequired": "请输入确认密码",
     "passwordMismatch": "两次输入的密码不一致",
-    "recipient": "收件人",
-    "recipientPlaceholder": "请输入收件人姓名",
-    "address": "地址",
-    "province": "省份",
-    "provincePlaceholder": "请选择省份",
-    "city": "城市",
-    "cityPlaceholder": "请选择城市",
-    "district": "区县",
-    "districtPlaceholder": "请选择区县",
-    "addressDetail": "详细地址",
-    "addressDetailPlaceholder": "请输入详细地址",
-    "loadingAddressData": "加载地址数据中...",
     "fetchUserInfoError": "获取用户信息失败",
-    "fetchAddressDataError": "获取地址数据失败",
     "updateBasicInfoSuccess": "基本信息更新成功",
     "updateBasicInfoError": "更新基本信息失败",
     "updatePasswordSuccess": "密码修改成功",
-    "updatePasswordError": "更新密码失败",
-    "deleteAddressSuccess": "地址删除成功",
-    "deleteAddressError": "删除地址失败",
-    "updateAddressSuccess": "地址更新成功",
-    "updateAddressError": "更新地址失败",
-    "addAddressSuccess": "地址添加成功",
-    "addAddressError": "添加地址失败"
+    "updatePasswordError": "更新密码失败"
   },
   "accountInfo": {
     "title": "抢购管理",
@@ -82,7 +60,6 @@
     "accountUsage": "账号情况",
     "account": "账号",
     "password": "密码",
-    "address": "地址",
     "taskCount": "任务总数",
     "noAccountData": "暂无抢购账号数据",
     "pleaseSelectActivity": "请先选择活动",
@@ -93,7 +70,6 @@
     "accountInfoManagement": "抢购账号管理",
     "accountPlaceholder": "请输入账号",
     "passwordPlaceholder": "请输入密码",
-    "addressPlaceholder": "请选择地址",
     "addAccountInfoSuccess": "新建账号成功",
     "addAccountInfoError": "新建账号失败",
     "updateAccountInfoSuccess": "更新账号成功",
@@ -136,9 +112,6 @@
     "editTask": "编辑任务",
     "deleteTask": "删除任务",
     "activityIdRequired": "活动ID不能为空",
-    "fetchUserAddressError": "获取用户地址失败",
-    "addAddressInProfile": "请先在个人中心添加地址",
-    "fetchAddressRetry": "获取地址失败，请重试",
     "invalidUserId": "无效的用户ID",
     "exportOrders": "导出订单",
     "exportOrdersTitle": "导出订单确认",
@@ -146,7 +119,11 @@
     "exportOrdersWarningRunning": "警告：该任务正在运行中！导出订单可能会中断任务执行。请确保任务已经完成或暂停后再导出。是否继续？",
     "exportingOrders": "正在导出订单数据...",
     "exportOrdersSuccess": "订单数据导出成功",
-    "exportOrdersError": "订单数据导出失败"
+    "exportOrdersError": "订单数据导出失败",
+    "tokenStatus": "Token",
+    "tokenNoToken": "无 Token",
+    "tokenExpired": "已过期",
+    "tokenRemaining": "剩余 {time}"
   },
   "user": {
     "title": "用户管理",
@@ -184,11 +161,8 @@
     "createdAt": "创建时间",
     "keyword": "关键字",
     "keywordPlaceholder": "用户名/手机号",
-    "addressList": "地址列表",
-    "noAddress": "暂无地址信息",
     "fetchUserListError": "获取用户列表失败",
     "fetchUserDetailError": "获取用户详情失败",
-    "fetchAddressError": "获取用户地址失败",
     "updateUserSuccess": "用户更新成功",
     "updateUserError": "更新用户失败",
     "addUserSuccess": "用户添加成功",
@@ -199,13 +173,7 @@
     "enableUserError": "启用用户失败",
     "disableUserSuccess": "禁用用户成功",
     "disableUserError": "禁用用户失败",
-    "loadingUserData": "加载用户数据中...",
-    "address": {
-      "name": "姓名",
-      "phone": "手机号",
-      "fullAddress": "详细地址",
-      "title": "地址"
-    }
+    "loadingUserData": "加载用户数据中..."
   },
   "activity": {
     "title": "活动管理",
@@ -281,7 +249,6 @@
       "month": "月"
     }
   },
-
   "common": {
     "save": "保存",
     "clear": "清空",

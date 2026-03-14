@@ -250,9 +250,10 @@ export function getConnectionStatus() {
   return connectionStatus.value;
 }
 
-/**
- * 组合式函数：在组件中使用Socket
- */
+export function getSocketInstance() {
+  return socket;
+}
+
 export function useSocket() {
   let unsubscribers: Array<() => void> = [];
 

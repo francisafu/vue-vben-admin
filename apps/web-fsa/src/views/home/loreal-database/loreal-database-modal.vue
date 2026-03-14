@@ -2,162 +2,87 @@
 import { computed, ref } from 'vue';
 
 import { useVbenModal } from '@vben/common-ui';
-import { useVbenForm } from '#/adapter/form';
 import {
   createLorealDatabase,
   updateLorealDatabase
 } from '#/api/core/lorealDatabase';
-import { message } from 'ant-design-vue';
+import { Button, message, Progress } from 'ant-design-vue';
+import { getSocketInstance } from '#/composables/useSocket';
 
-// 表单数据
 const data = ref<Record<string, any>>({});
 const isUpdate = computed(() => data.value?.mode === 'update');
 const database = computed(() => data.value?.database);
-const loading = ref(false);
-const submitting = ref(false);
+const crawling = ref(false);
+const crawlProgress = ref({ phase: '', current: 0, total: 0, message: '' });
 
-// 创建字段信息
-const createFields = computed(() => [
-  {
-    component: 'Input',
-    componentProps: {
-      placeholder: '请输入欧莱雅账号',
-      autocomplete: 'off',
-    },
-    fieldName: 'account',
-    label: '欧莱雅账号',
-    rules: 'required',
-  },
-  {
-    component: 'Input',
-    componentProps: {
-      placeholder: '请输入欧莱雅密码',
-      autocomplete: 'new-password',
-      type: 'password',
-    },
-    fieldName: 'password',
-    label: '欧莱雅密码',
-    rules: 'required',
-  },
-]);
+const modalTitle = computed(() => isUpdate.value ? '更新欧莱雅商品数据' : '爬取欧莱雅商品数据');
 
-const updateFields = computed(() => [
-  {
-    component: 'Input',
-    componentProps: {
-      placeholder: '请输入欧莱雅账号',
-      autocomplete: 'off',
-    },
-    fieldName: 'account',
-    label: '欧莱雅账号',
-    rules: 'required',
-  },
-  {
-    component: 'Input',
-    componentProps: {
-      placeholder: '请输入欧莱雅密码',
-      autocomplete: 'new-password',
-      type: 'password',
-    },
-    fieldName: 'password',
-    label: '欧莱雅密码',
-    rules: 'required',
-  },
-]);
-
-// 表单配置
-const formSchema = computed(() => isUpdate.value ? updateFields.value : createFields.value);
-
-const [Form, formApi] = useVbenForm({
-  layout: 'vertical',
-  handleSubmit,
-  submitButtonOptions: computed(() => ({
-    content: isUpdate.value ? '更新' : '创建',
-    disabled: submitting.value,
-    loading: submitting.value,
-  })),
-  resetButtonOptions: computed(() => ({
-    content: '清空',
-    disabled: submitting.value,
-  })),
-  commonConfig: {
-    componentProps: {
-      class: 'w-full',
-    },
-  },
-  schema: formSchema.value as any,
+const progressPercent = computed(() => {
+  if (!crawlProgress.value.total) return 0;
+  return Math.round((crawlProgress.value.current / crawlProgress.value.total) * 100);
 });
-
-// 初始化modal  
-const modalTitle = computed(() => isUpdate.value ? '更新欧莱雅数据库' : '添加欧莱雅数据库');
 
 const [Modal, modalApi] = useVbenModal({
   draggable: true,
   footer: false,
-  // 打开modal时获取数据
+  closable: computed(() => !crawling.value) as any,
   async onOpenChange(isOpen: boolean) {
     if (isOpen) {
-      // 获取传入的数据
       data.value = modalApi.getData<Record<string, any>>() || {};
-
-      // 重置表单
-      (formApi as any).resetFields && (formApi as any).resetFields();
-
-      if (isUpdate.value && database.value) {
-        // 更新模式：清空表单
-        formApi.setValues({
-          account: '',
-          password: ''
-        });
-      } else {
-        // 新建模式：设置当前选定的活动ID
-        formApi.setValues({
-          account: '',
-          password: ''
-        });
-      }
+      crawling.value = false;
+      crawlProgress.value = { phase: '', current: 0, total: 0, message: '' };
     }
   },
 });
 
-// 处理表单提交
-async function handleSubmit(values: any) {
-  try {
-    submitting.value = true;
+function setupSocketListener() {
+  const socket = getSocketInstance();
+  if (!socket) return null;
 
-    if (isUpdate.value) {
-      // 更新数据库
-      await updateLorealDatabase(database.value.id, {
-        account: values.account,
-        password: values.password
-      });
-      message.success('更新成功');
-    } else {
-      // 创建数据库，使用传入的活动ID
-      const activityId = data.value?.activityId;
-      if (!activityId) {
-        message.error('请先选择一个活动');
-        return;
-      }
-      
-      await createLorealDatabase({
-        activityId: activityId,
-        account: values.account,
-        password: values.password
-      });
-      message.success('创建成功');
+  const handler = (update: any) => {
+    if (update?.type === 'crawl:progress') {
+      crawlProgress.value = {
+        phase: update.phase || '',
+        current: update.current || 0,
+        total: update.total || 0,
+        message: update.message || ''
+      };
     }
+  };
 
-    // 设置状态标记操作成功
-    data.value.operationSuccess = true;
+  socket.on('task:status-update', handler);
+  return () => socket.off('task:status-update', handler);
+}
 
-    // 关闭弹窗
-    modalApi.close();
+async function handleCrawl() {
+  try {
+    crawling.value = true;
+    crawlProgress.value = { phase: 'init', current: 0, total: 0, message: '正在准备爬取...' };
 
+    const cleanup = setupSocketListener();
+
+    try {
+      if (isUpdate.value) {
+        await updateLorealDatabase(database.value.id);
+      } else {
+        const activityId = data.value?.activityId;
+        if (!activityId) {
+          message.error('请先选择一个活动');
+          return;
+        }
+        await createLorealDatabase({ activityId });
+      }
+
+      message.success(isUpdate.value ? '更新成功' : '爬取成功');
+      data.value.operationSuccess = true;
+      modalApi.close();
+    } finally {
+      if (cleanup) cleanup();
+    }
   } catch (error: any) {
-    message.error(error.message || '操作失败');
+    message.error(error.message || '爬取失败');
   } finally {
-    submitting.value = false;
+    crawling.value = false;
   }
 }
 </script>
@@ -165,44 +90,40 @@ async function handleSubmit(values: any) {
 <template>
   <Modal :title="modalTitle">
     <div class="loreal-database-modal p-4">
-      <div v-if="loading" class="flex-center py-10">
-        <div class="text-center">加载中...</div>
+      <div class="mb-4 p-4 bg-gray-50 rounded">
+        <div class="text-sm text-gray-600">
+          <div v-if="isUpdate">
+            <div class="mb-1">活动ID: {{ database?.activityId }}</div>
+            <div class="mb-1">当前商品数: {{ database?.productCount }} 个</div>
+            <div>上次爬取: {{ new Date(database?.scrapedAt).toLocaleString() }}</div>
+          </div>
+          <div v-else>
+            <div class="mb-1">当前选择的活动ID: {{ data?.activityId }}</div>
+            <div>系统将自动选择 token 有效期最长的账号进行爬取</div>
+          </div>
+        </div>
       </div>
-      <div v-else>
-        <div class="mb-4 p-4 bg-gray-50 rounded">
-          <div class="text-sm text-gray-600">
-            <div v-if="isUpdate">
-              <div class="mb-1">活动ID: {{ database?.activityId }}</div>
-              <div class="mb-1">当前商品数: {{ database?.productCount }} 个</div>
-              <div>上次爬取: {{ new Date(database?.scrapedAt).toLocaleString() }}</div>
-            </div>
-            <div v-else>
-              <div class="mb-1">当前选择的活动ID: {{ data?.activityId }}</div>
-              <div>即将为此活动爬取商品数据</div>
-            </div>
-          </div>
-        </div>
-        
-        <div class="mb-4 p-4 bg-blue-50 rounded">
-          <div class="text-sm text-blue-600">
-            <div class="flex items-start">
-              <span class="font-semibold mr-2">提示：</span>
-              <span v-if="isUpdate">重新爬取将替换现有的所有商品数据</span>
-              <span v-else>爬取可能需要几分钟时间，请耐心等待</span>
-            </div>
-          </div>
-        </div>
 
-        <Form />
-
-        <div class="mt-4 p-4 bg-yellow-50 rounded">
-          <div class="text-sm text-yellow-700">
-            <div class="flex items-start">
-              <span class="font-semibold mr-2">注意：</span>
-              <span>请确保账号密码正确，且该账号有权限访问欧莱雅官网</span>
-            </div>
+      <div class="mb-4 p-4 bg-blue-50 rounded">
+        <div class="text-sm text-blue-600">
+          <div class="flex items-start">
+            <span class="font-semibold mr-2">提示：</span>
+            <span v-if="isUpdate">重新爬取将替换现有的所有商品数据</span>
+            <span v-else>爬取约需 2-3 分钟，请耐心等待</span>
           </div>
         </div>
+      </div>
+
+      <div v-if="crawling" class="mb-4">
+        <Progress :percent="progressPercent" :status="crawlProgress.phase === 'done' ? 'success' : 'active'" />
+        <div class="text-sm text-gray-500 mt-2">{{ crawlProgress.message }}</div>
+      </div>
+
+      <div class="flex justify-end gap-2">
+        <Button :disabled="crawling" @click="modalApi.close()">取消</Button>
+        <Button type="primary" :loading="crawling" @click="handleCrawl">
+          {{ crawling ? '爬取中...' : (isUpdate ? '开始更新' : '开始爬取') }}
+        </Button>
       </div>
     </div>
   </Modal>
@@ -210,7 +131,7 @@ async function handleSubmit(values: any) {
 
 <style scoped>
 .loreal-database-modal {
-  min-height: 300px;
+  min-height: 200px;
   overflow-x: hidden;
 }
 
@@ -222,19 +143,15 @@ async function handleSubmit(values: any) {
   background-color: #eff6ff;
 }
 
-.bg-yellow-50 {
-  background-color: #fefce8;
-}
-
 .text-gray-600 {
   color: #4b5563;
 }
 
-.text-blue-600 {
-  color: #2563eb;
+.text-gray-500 {
+  color: #6b7280;
 }
 
-.text-yellow-700 {
-  color: #a16207;
+.text-blue-600 {
+  color: #2563eb;
 }
 </style>
