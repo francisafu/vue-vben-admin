@@ -5,6 +5,7 @@ export namespace TaskApi {
   export interface ProductInfo {
     skuCode: string;
     productName: string;
+    spec?: string;
     quantity: number;
     order: number;
   }

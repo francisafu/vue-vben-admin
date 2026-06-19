@@ -306,6 +306,7 @@
     "parseSuccess": "成功解析 {count} 个商品",
     "productCode": "编码",
     "productName": "品名",
+    "productSpec": "规格",
     "quantity": "数量",
     "order": "组别",
     "productCount": "商品数量",

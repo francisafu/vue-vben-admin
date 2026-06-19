@@ -75,6 +75,7 @@ const formData = reactive<{
     skuCode: string;
     quantity: number;
     productName?: string;
+    spec?: string;
     order?: number;
   }>;
 }>({
@@ -124,6 +125,14 @@ const productColumns = [
     key: 'productName',
     width: 200,
     ellipsis: true
+  },
+  {
+    title: $t('page.task.productSpec'),
+    dataIndex: 'spec',
+    key: 'spec',
+    width: 140,
+    ellipsis: true,
+    customRender: ({ record }: { record: any }) => record.spec || '-'
   },
   {
     title: $t('page.task.quantity'),
@@ -199,6 +208,7 @@ async function handleSubmit() {
         products: formData.products.map((p, index) => ({
           skuCode: p.skuCode.trim(),
           productName: p.productName || '', // 使用保存的商品名称
+          spec: p.spec || '',
           quantity: p.quantity,
           order: p.order || (index + 1) // 使用原始order值，如果没有则使用index+1
         }))
@@ -218,6 +228,7 @@ async function handleSubmit() {
         products: formData.products.map((p, index) => ({
           skuCode: p.skuCode.trim(),
           productName: p.productName || '', // 使用保存的商品名称
+          spec: p.spec || '',
           quantity: p.quantity,
           order: p.order || (index + 1) // 使用原始order值，如果没有则使用index+1
         }))
@@ -300,6 +311,7 @@ async function handleUpload(info: any) {
         skuCode: product.skuCode,
         quantity: product.quantity,
         productName: product.productName,
+        spec: product.spec,
         order: product.order
       }));
       message.success($t('page.task.parseSuccess', { count: formData.products.length }));
